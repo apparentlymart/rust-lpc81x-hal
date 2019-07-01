@@ -4,14 +4,14 @@
 
 #[macro_use]
 extern crate cortex_m_rt;
-extern crate lpc82x_hal;
+extern crate lpc81x;
 extern crate panic_abort;
 
 
-use lpc82x_hal::prelude::*;
-use lpc82x_hal::Peripherals;
-use lpc82x_hal::clock::Ticks;
-use lpc82x_hal::sleep;
+use lpc81x::prelude::*;
+use lpc81x::Peripherals;
+use lpc81x::clock::Ticks;
+use lpc81x::sleep;
 
 
 #[entry]

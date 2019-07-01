@@ -13,7 +13,7 @@ use crate::{
         GPIO,
     },
     init_state,
-    raw,
+    target_device,
     syscon,
 };
 
@@ -37,11 +37,11 @@ use self::pin_state::PinState;
 /// [`Peripherals`]: ../struct.Peripherals.html
 /// [module documentation]: index.html
 pub struct SWM {
-    swm: raw::SWM,
+    swm: target_device::SWM,
 }
 
 impl SWM {
-    pub(crate) fn new(swm: raw::SWM) -> Self {
+    pub(crate) fn new(swm: target_device::SWM) -> Self {
         SWM { swm }
     }
 
@@ -64,14 +64,7 @@ impl SWM {
     /// This method serves as an escape hatch from the HAL API. It returns the
     /// raw peripheral, allowing you to do whatever you want with it, without
     /// limitations imposed by the API.
-    ///
-    /// If you are using this method because a feature you need is missing from
-    /// the HAL API, please [open an issue] or, if an issue for your feature
-    /// request already exists, comment on the existing issue, so we can
-    /// prioritize it accordingly.
-    ///
-    /// [open an issue]: https://github.com/braun-robotics/rust-lpc82x-hal/issues
-    pub fn free(self) -> raw::SWM {
+    pub fn free(self) -> target_device::SWM {
         self.swm
     }
 }
@@ -109,12 +102,12 @@ pub struct Parts {
 ///
 /// [module documentation]: index.html
 pub struct Handle<State = init_state::Enabled> {
-    swm   : raw::SWM,
+    swm   : target_device::SWM,
     _state: State,
 }
 
 impl Handle<init_state::Enabled> {
-    pub(crate) fn new(swm: raw::SWM) -> Self {
+    pub(crate) fn new(swm: target_device::SWM) -> Self {
         Handle {
             swm   : swm,
             _state: init_state::Enabled(()),
@@ -174,7 +167,7 @@ impl Handle<init_state::Enabled> {
 /// Implemented by types that identify pins
 ///
 /// This trait is an internal implementation detail and should neither be
-/// implemented nor used outside of LPC82x HAL. Any changes to this trait won't
+/// implemented nor used outside of LPC81x HAL. Any changes to this trait won't
 /// be considered breaking changes.
 ///
 /// Please refer to [`Pin`] for the public API used to control pins.
@@ -207,7 +200,7 @@ macro_rules! pins {
         /// # Limitations
         ///
         /// This struct currently provides access to all pins that can be
-        /// available on an LPC82x part. Please make sure that you are aware of
+        /// available on an LPC81x part. Please make sure that you are aware of
         /// which pins are actually available on your specific part, and only
         /// use those.
         ///
@@ -305,7 +298,7 @@ pins!(
 /// an invalid state transition will simply not compile:
 ///
 /// ``` no_run
-/// # use lpc82x_hal::Peripherals;
+/// # use lpc81x::Peripherals;
 /// #
 /// # let mut p = Peripherals::take().unwrap();
 /// #
@@ -327,7 +320,7 @@ pins!(
 /// movable function and transition the pin to the unused state:
 ///
 /// ``` no_run
-/// # use lpc82x_hal::Peripherals;
+/// # use lpc81x::Peripherals;
 /// #
 /// # let mut p = Peripherals::take().unwrap();
 /// #
@@ -353,7 +346,7 @@ pins!(
 /// it is in its unused state.
 ///
 /// ``` no_run
-/// use lpc82x_hal::Peripherals;
+/// use lpc81x::Peripherals;
 ///
 /// let mut p = Peripherals::take().unwrap();
 ///
@@ -378,7 +371,7 @@ pins!(
 /// [`Pin::into_output`].
 ///
 /// ``` no_run
-/// # use lpc82x_hal::Peripherals;
+/// # use lpc81x::Peripherals;
 /// #
 /// # let p = Peripherals::take().unwrap();
 /// #
@@ -387,7 +380,6 @@ pins!(
 /// # let pin = swm.pins.pio0_12
 /// #     .into_gpio_pin(&p.GPIO);
 /// #
-/// use lpc82x_hal::prelude::*;
 ///
 /// // Configure pin for digital output. This assumes that the pin is currently
 /// // in the GPIO state.
@@ -397,9 +389,6 @@ pins!(
 /// pin.set_high();
 /// pin.set_low();
 /// ```
-///
-/// Using pins for digital input is currently not supported by the API. If you
-/// need this feature, [please speak up](https://github.com/braun-robotics/rust-lpc82x-hal/issues/50).
 ///
 /// # Fixed and Movable Functions
 ///
@@ -411,7 +400,7 @@ pins!(
 /// the unused state to the SWM state using [`Pin::into_swm_pin`].
 ///
 /// ``` no_run
-/// # use lpc82x_hal::Peripherals;
+/// # use lpc81x::Peripherals;
 /// #
 /// # let p = Peripherals::take().unwrap();
 /// #
@@ -429,45 +418,12 @@ pins!(
 /// one output function can be assigned to a pin at once (see user manual,
 /// section 7.4). These rules are enforced by the API at compile time.
 ///
-/// **NOTE:** There is some uncertainty about whether those rules treat GPIO as
-/// just another kind of function, or if they don't apply to it. Currently, this
-/// API treats GPIO as something entirely different from the switch matrix
-/// functions, which may be too restrictive. If you have any insight on this
-/// topic, [please help us figure this out](https://github.com/braun-robotics/rust-lpc82x-hal/issues/44).
-///
 /// Once a pin is in the SWM state, you can assign functions to it. Please refer
 /// to [`Function`] for more information on how to do that.
-///
-/// # Analog Input
-///
-/// To use a pin for analog input, you need to assign an ADC function:
-///
-/// ``` no_run
-/// use lpc82x_hal::Peripherals;
-///
-/// let p = Peripherals::take().unwrap();
-///
-/// let mut swm = p.SWM.split();
-///
-/// // Transition pin into ADC state
-/// let (adc_2, pio0_14) = swm.fixed_functions.adc_2.assign(
-///     swm.pins.pio0_14.into_swm_pin(),
-///     &mut swm.handle,
-/// );
-/// ```
-///
-/// Using the pin for analog input once it is in the ADC state is currently not
-/// supported by this API. If you need this feature, [please let us know](https://github.com/braun-robotics/rust-lpc82x-hal/issues/51)!
-///
-/// As a woraround, you can use the raw register mappings from the lpc82x crate,
-/// [`lpc82x::IOCON`] and [`lpc82x::ADC`], after you have put the pin into the
-/// ADC state.
 ///
 /// [`direction::Unknown`]: ../gpio/direction/struct.Unknown.html
 /// [`direction::Input`]: ../gpio/direction/struct.Input.html
 /// [`direction::Output`]: ../gpio/direction/struct.Output.html
-/// [`lpc82x::IOCON`]: https://docs.rs/lpc82x/0.4.*/lpc82x/struct.IOCON.html
-/// [`lpc82x::ADC`]: https://docs.rs/lpc82x/0.4.*/lpc82x/struct.ADC.html
 pub struct Pin<T: PinTrait, S: PinState> {
     pub(crate) ty   : T,
     pub(crate) state: S,
@@ -491,7 +447,7 @@ impl<T> Pin<T, pin_state::Unused> where T: PinTrait {
     /// # Example
     ///
     /// ``` no_run
-    /// use lpc82x_hal::Peripherals;
+    /// use lpc81x::Peripherals;
     ///
     /// let p = Peripherals::take().unwrap();
     ///
@@ -535,7 +491,7 @@ impl<T> Pin<T, pin_state::Unused> where T: PinTrait {
     /// # Example
     ///
     /// ``` no_run
-    /// use lpc82x_hal::Peripherals;
+    /// use lpc81x::Peripherals;
     ///
     /// let p = Peripherals::take().unwrap();
     ///
@@ -559,7 +515,7 @@ impl<T> Pin<T, pin_state::Unused> where T: PinTrait {
 impl<T> Pin<T, pin_state::Swm<(), ()>> where T: PinTrait {
     /// Transitions this pin from the SWM state to the unused state
     ///
-    /// This method is only available, if two conditions are met:
+    /// This method is only available if two conditions are met:
     /// - The pin is in the SWM state.
     /// - No functions are assigned to this pin.
     ///
@@ -669,7 +625,7 @@ pub mod pin_state {
 
     use crate::{
         gpio::direction::Direction,
-        raw::gpio_port::{
+        target_device::gpio_port::{
             CLR0,
             DIRSET0,
             PIN0,
@@ -793,7 +749,7 @@ impl<T> Function<T, state::Unassigned> {
     /// Assign one output and one input function to the same pin:
     ///
     /// ``` no_run
-    /// use lpc82x_hal::Peripherals;
+    /// use lpc81x::Peripherals;
     ///
     /// let p = Peripherals::take().unwrap();
     ///
@@ -863,7 +819,7 @@ impl<T, P> Function<T, state::Assigned<P>> {
     /// Unassign a function that has been previously assigned to a pin:
     ///
     /// ``` no_run
-    /// # use lpc82x_hal::Peripherals;
+    /// # use lpc81x::Peripherals;
     /// #
     /// # let p = Peripherals::take().unwrap();
     /// #
@@ -908,7 +864,7 @@ impl<T, P> Function<T, state::Assigned<P>> {
 /// Implemented for all fixed and movable functions
 ///
 /// This trait is an internal implementation detail and should neither be
-/// implemented nor used outside of LPC82x HAL. Any changes to this trait won't
+/// implemented nor used outside of LPC81x HAL. Any changes to this trait won't
 /// be considered breaking changes.
 ///
 /// Please refer [`Function::assign`] and [`Function::unassign`] for the public
@@ -932,7 +888,7 @@ pub trait FunctionTrait<P: PinTrait> {
 /// Implemented for types that designate whether a function is input or output
 ///
 /// This trait is an internal implementation detail and should neither be
-/// implemented nor used outside of LPC82x HAL. Any changes to this trait won't
+/// implemented nor used outside of LPC81x HAL. Any changes to this trait won't
 /// be considered breaking changes.
 pub trait FunctionKind {}
 
@@ -952,7 +908,7 @@ impl FunctionKind for Adc {}
 /// Internal trait used to assign functions to pins
 ///
 /// This trait is an internal implementation detail and should neither be
-/// implemented nor used outside of LPC82x HAL. Any changes to this trait won't
+/// implemented nor used outside of LPC81x HAL. Any changes to this trait won't
 /// be considered breaking changes.
 ///
 /// Please refer to [`Function::assign`] for the public API that uses this
@@ -968,7 +924,7 @@ pub trait AssignFunction<Function, Kind> {
 /// Internal trait used to unassign functions from pins
 ///
 /// This trait is an internal implementation detail and should neither be
-/// implemented nor used outside of LPC82x HAL. Any changes to this trait won't
+/// implemented nor used outside of LPC81x HAL. Any changes to this trait won't
 /// be considered breaking changes.
 ///
 /// Please refer to [`Function::unassign`] for the public API that uses this

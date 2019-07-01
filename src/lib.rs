@@ -1,41 +1,7 @@
-//! # LPC82x Hardware Abstraction Layer
+//! # LPC81x Hardware Abstraction Layer
 //!
-//! Hardware Abstraction Layer (HAL) for the NXP LPC82x series of ARM Cortex-M0+
+//! Hardware Abstraction Layer (HAL) for the NXP LPC81x series of ARM Cortex-M0+
 //! microcontrollers.
-//!
-//! ## Using LPC82x HAL in a Library
-//!
-//! Writing a library on top of LPC82x HAL is pretty simple. All you need to do
-//! is include it via Cargo, by adding the following to your `Cargo.toml`:
-//!
-//! ``` toml
-//! [dependencies]
-//! lpc82x-hal = "0.2"
-//! ```
-//!
-//! With that in place, you can just reference the crate in your Rust code, like
-//! this:
-//!
-//! ```rust
-//! // lib.rs
-//!
-//! extern crate lpc82x_hal;
-//! ```
-//!
-//! That's it! Now you can start using the LPC82x HAL APIs. Take a look at
-//! [`Peripherals`], which is the entry point to the whole API.
-//!
-//! Please note that LPC82x HAL is an implementation of [embedded-hal]. If your
-//! library is not specific to LPC82x, please consider depending on embedded-hal
-//! instead. Doing so means that your library should work on top of all
-//! embedded-hal implementations.
-//!
-//! ## Using LPC82x HAL in an Application
-//!
-//! To use LPC82x HAL in your application, you need to go through a bit of
-//! additional trouble. This section tries to walk you through some of the
-//! basics, but it's not a complete tutorial. Please refer to
-//! [cortex-m-quickstart] for additional details.
 //!
 //! ### Runtime Support
 //!
@@ -44,8 +10,8 @@
 //! when including the crate in your `Cargo.toml`:
 //!
 //! ``` toml
-//! [dependencies.lpc82x-hal]
-//! version  = "0.2"
+//! [dependencies.lpc81x-hal]
+//! version  = "0.1.0"
 //! features = ["rt"]
 //! ```
 //!
@@ -53,7 +19,7 @@
 //! your program to run correctly. However, it needs to know how the memory on
 //! your microcontroller is set up.
 //!
-//! You can get that information from the user manual. To provide it to LPC82x
+//! You can get that information from the user manual. To provide it to LPC81x
 //! HAL, create a file called `memory.x` in your project root (the directory
 //! where `Cargo.toml` is located). `memory.x` should look something like this:
 //!
@@ -67,143 +33,34 @@
 //!
 //! Runtime support is provided by the [cortex-m-rt] crate. Please refer to the
 //! cortex-m-rt documentation for additional details.
-//!
-//! ### Build System
-//!
-//! The LPC82x is a Cortex-M0+ microcontroller, which means it has an ARMv6-M
-//! core. In order to compile and link a binary for that architecture, we need
-//! to install a precompiled Rust core library.
-//!
-//! The following example assumes you installed Rust using [rustup].
-//!
-//! ``` ignore
-//! $ rustup target add thumbv6m-none-eabi
-//! ```
-//!
-//! This will install the precompiled core library we need, enabling us to
-//! cross-compile binaries for the LPC82x.
-//!
-//! Additionally, we need to tell Cargo how to link your project. Create the
-//! file `.cargo/config` in your project directory, and add the following
-//! contents:
-//!
-//! ``` toml
-//! [build]
-//! target = "thumbv6m-none-eabi"
-//!
-//! [target.thumbv6m-none-eabi]
-//! rustflags = [
-//!     "-C", "link-arg=-Tlink.x",
-//!     "-C", "linker=arm-none-eabi-ld",
-//!     "-Z", "linker-flavor=ld"
-//! ]
-//! ```
-//!
-//! This tells Cargo to use the arm-none-eabi-gcc toolchain for linking. You
-//! need to install this separately. How to do so is dependent on your platform
-//! and is left as an exercise to the reader.
-//!
-//! If everything is set up correctly, you can build your project with the
-//! following command:
-//!
-//! ``` ignore
-//! $ cargo build --release
-//! ```
-//!
-//! ### Uploading the Binary
-//!
-//! There are many ways to upload the binary to the microcontroller. How to do
-//! this is currently beyond the scope of this documentation, but
-//! [this fork of lpc21isp] is known to work.
-//!
-//! ## Examples
-//!
-//! There are a number of [examples in the repository]. A good place to start is
-//! the [GPIO example].
-//!
-//! # References
-//!
-//! Various places in this crate's documentation reference the LPC82x User
-//! manual, which is [available from NXP].
-//!
-//! [embedded-hal]: https://crates.io/crates/embedded-hal
-//! [cortex-m-quickstart]: https://github.com/japaric/cortex-m-quickstart
-//! [cortex-m-rt]: https://crates.io/crates/cortex-m-rt
-//! [rustup]: https://rustup.rs/
-//! [This fork of lpc21isp]: https://github.com/hannobraun/lpc21isp
-//! [examples in the repository]: https://github.com/braun-robotics/rust-lpc82x-hal/tree/master/examples
-//! [GPIO example]: https://github.com/braun-robotics/rust-lpc82x-hal/blob/master/examples/gpio.rs
-//! [available from NXP]: https://www.nxp.com/docs/en/user-guide/UM10800.pdf
-
 
 #![feature(const_fn)]
 #![feature(never_type)]
-
-#![deny(warnings)]
 #![deny(missing_docs)]
-
 #![no_std]
 
-
-#[cfg(test)] extern crate std;
-
-#[macro_use] extern crate nb;
-
+extern crate nb;
 extern crate cortex_m;
 extern crate embedded_hal;
 extern crate void;
 
-pub extern crate lpc82x_pac as raw;
+pub extern crate lpc81x_pac as target_device;
 
-
-#[macro_use] pub(crate) mod reg_proxy;
+#[macro_use]
+pub(crate) mod reg_proxy;
 
 pub mod clock;
-pub mod dma;
 pub mod gpio;
 pub mod i2c;
 pub mod pmu;
-pub mod sleep;
 pub mod swm;
 pub mod syscon;
-pub mod usart;
-pub mod wkt;
 
-
-pub use self::dma::DMA;
 pub use self::gpio::GPIO;
 pub use self::i2c::I2C;
 pub use self::pmu::PMU;
 pub use self::swm::SWM;
 pub use self::syscon::SYSCON;
-pub use self::usart::USART;
-pub use self::wkt::WKT;
-
-
-/// Re-exports various traits that are required to use lpc82x-hal
-///
-/// The purpose of this module is to improve convenience, by not requiring the
-/// user to import traits separately. Just add the following to your code, and
-/// you should be good to go:
-///
-/// ``` rust
-/// use lpc82x_hal::prelude::*;
-/// ```
-///
-/// The traits in this module have been renamed, to avoid collisions with other
-/// imports.
-pub mod prelude {
-    pub use embedded_hal::prelude::*;
-
-    pub use crate::{
-        clock::{
-            Enabled as _lpc82x_hal_clock_Enabled,
-            Frequency as _lpc82x_hal_clock_Frequency,
-        },
-        sleep::Sleep as _lpc82x_hal_sleep_Sleep,
-    };
-}
-
 
 /// Contains types that encode the state of hardware initialization
 ///
@@ -221,7 +78,6 @@ pub mod init_state {
     /// Indicates that the hardware component is disabled
     pub struct Disabled;
 }
-
 
 /// Provides access to all peripherals
 ///
@@ -255,9 +111,6 @@ pub mod init_state {
 /// use of the hardware.
 #[allow(non_snake_case)]
 pub struct Peripherals {
-    /// DMA controller
-    pub DMA: DMA,
-
     /// General-purpose I/O (GPIO)
     ///
     /// The GPIO peripheral is enabled by default. See user manual, section
@@ -265,7 +118,7 @@ pub struct Peripherals {
     pub GPIO: GPIO<init_state::Enabled>,
 
     /// I2C0-bus interface
-    pub I2C0: I2C<init_state::Disabled>,
+    pub I2C: I2C<init_state::Disabled>,
 
     /// Power Management Unit
     pub PMU: PMU,
@@ -276,165 +129,110 @@ pub struct Peripherals {
     /// System configuration
     pub SYSCON: SYSCON,
 
-    /// USART0
-    pub USART0: USART<raw::USART0, init_state::Disabled>,
-
-    /// USART1
-    pub USART1: USART<raw::USART1, init_state::Disabled>,
-
-    /// USART2
-    pub USART2: USART<raw::USART2, init_state::Disabled>,
-
-    /// Self-wake-up timer (WKT)
-    pub WKT: WKT<init_state::Disabled>,
-
-
-    /// Analog-to-Digital Converter (ADC)
-    ///
-    /// A HAL API for this peripheral has not been implemented yet. In the
-    /// meantime, this field provides you with the raw register mappings, which
-    /// allow you full, unprotected access to the peripheral.
-    pub ADC: raw::ADC,
-
     /// Analog comparator
     ///
     /// A HAL API for this peripheral has not been implemented yet. In the
     /// meantime, this field provides you with the raw register mappings, which
     /// allow you full, unprotected access to the peripheral.
-    pub CMP: raw::CMP,
+    pub CMP: target_device::CMP,
 
     /// CRC engine
     ///
     /// A HAL API for this peripheral has not been implemented yet. In the
     /// meantime, this field provides you with the raw register mappings, which
     /// allow you full, unprotected access to the peripheral.
-    pub CRC: raw::CRC,
-
-    /// DMA trigger mux
-    ///
-    /// A HAL API for this peripheral has not been implemented yet. In the
-    /// meantime, this field provides you with the raw register mappings, which
-    /// allow you full, unprotected access to the peripheral.
-    pub DMATRIGMUX: raw::DMATRIGMUX,
+    pub CRC: target_device::CRC,
 
     /// Flash controller
     ///
     /// A HAL API for this peripheral has not been implemented yet. In the
     /// meantime, this field provides you with the raw register mappings, which
     /// allow you full, unprotected access to the peripheral.
-    pub FLASHCTRL: raw::FLASHCTRL,
-
-    /// I2C0-bus interface
-    ///
-    /// A HAL API for this peripheral has not been implemented yet. In the
-    /// meantime, this field provides you with the raw register mappings, which
-    /// allow you full, unprotected access to the peripheral.
-    pub I2C1: raw::I2C1,
-
-    /// I2C0-bus interface
-    ///
-    /// A HAL API for this peripheral has not been implemented yet. In the
-    /// meantime, this field provides you with the raw register mappings, which
-    /// allow you full, unprotected access to the peripheral.
-    pub I2C2: raw::I2C2,
-
-    /// I2C0-bus interface
-    ///
-    /// A HAL API for this peripheral has not been implemented yet. In the
-    /// meantime, this field provides you with the raw register mappings, which
-    /// allow you full, unprotected access to the peripheral.
-    pub I2C3: raw::I2C3,
-
-    /// Input multiplexing
-    ///
-    /// A HAL API for this peripheral has not been implemented yet. In the
-    /// meantime, this field provides you with the raw register mappings, which
-    /// allow you full, unprotected access to the peripheral.
-    pub INPUTMUX: raw::INPUTMUX,
+    pub FLASHCTRL: target_device::FLASHCTRL,
 
     /// I/O configuration
     ///
     /// A HAL API for this peripheral has not been implemented yet. In the
     /// meantime, this field provides you with the raw register mappings, which
     /// allow you full, unprotected access to the peripheral.
-    pub IOCON: raw::IOCON,
+    pub IOCON: target_device::IOCON,
 
     /// Multi-Rate Timer (MRT)
     ///
     /// A HAL API for this peripheral has not been implemented yet. In the
     /// meantime, this field provides you with the raw register mappings, which
     /// allow you full, unprotected access to the peripheral.
-    pub MRT: raw::MRT,
+    pub MRT: target_device::MRT,
 
     /// Pin interrupt and pattern match engine
     ///
     /// A HAL API for this peripheral has not been implemented yet. In the
     /// meantime, this field provides you with the raw register mappings, which
     /// allow you full, unprotected access to the peripheral.
-    pub PIN_INT: raw::PIN_INT,
+    pub PIN_INT: target_device::PIN_INT,
 
     /// State Configurable Timer (SCT)
     ///
     /// A HAL API for this peripheral has not been implemented yet. In the
     /// meantime, this field provides you with the raw register mappings, which
     /// allow you full, unprotected access to the peripheral.
-    pub SCT: raw::SCT,
+    pub SCT: target_device::SCT,
 
     /// SPI0
     ///
     /// A HAL API for this peripheral has not been implemented yet. In the
     /// meantime, this field provides you with the raw register mappings, which
     /// allow you full, unprotected access to the peripheral.
-    pub SPI0: raw::SPI0,
+    pub SPI0: target_device::SPI0,
 
     /// SPI1
     ///
     /// A HAL API for this peripheral has not been implemented yet. In the
     /// meantime, this field provides you with the raw register mappings, which
     /// allow you full, unprotected access to the peripheral.
-    pub SPI1: raw::SPI1,
+    pub SPI1: target_device::SPI1,
 
     /// Windowed Watchdog Timer (WWDT)
     ///
     /// A HAL API for this peripheral has not been implemented yet. In the
     /// meantime, this field provides you with the raw register mappings, which
     /// allow you full, unprotected access to the peripheral.
-    pub WWDT: raw::WWDT,
+    pub WWDT: target_device::WWDT,
 
     /// CPUID
     ///
     /// This is a core peripherals that's available on all ARM Cortex-M0+ cores.
-    pub CPUID: raw::CPUID,
+    pub CPUID: target_device::CPUID,
 
     /// Debug Control Block (DCB)
     ///
     /// This is a core peripherals that's available on all ARM Cortex-M0+ cores.
-    pub DCB: raw::DCB,
+    pub DCB: target_device::DCB,
 
     /// Data Watchpoint and Trace unit (DWT)
     ///
     /// This is a core peripherals that's available on all ARM Cortex-M0+ cores.
-    pub DWT: raw::DWT,
+    pub DWT: target_device::DWT,
 
     /// Memory Protection Unit (MPU)
     ///
     /// This is a core peripherals that's available on all ARM Cortex-M0+ cores.
-    pub MPU: raw::MPU,
+    pub MPU: target_device::MPU,
 
     /// Nested Vector Interrupt Controller (NVIC)
     ///
     /// This is a core peripherals that's available on all ARM Cortex-M0+ cores.
-    pub NVIC: raw::NVIC,
+    pub NVIC: target_device::NVIC,
 
     /// System Control Block (SCB)
     ///
     /// This is a core peripherals that's available on all ARM Cortex-M0+ cores.
-    pub SCB: raw::SCB,
+    pub SCB: target_device::SCB,
 
     /// SysTick: System Timer
     ///
     /// This is a core peripherals that's available on all ARM Cortex-M0+ cores.
-    pub SYST: raw::SYST,
+    pub SYST: target_device::SYST,
 }
 
 impl Peripherals {
@@ -460,17 +258,12 @@ impl Peripherals {
     /// # Example
     ///
     /// ``` no_run
-    /// use lpc82x_hal::Peripherals;
-    ///
-    /// // This code should be at the beginning of your program. As long as this
-    /// // is the only place that calls `take`, the following should never
-    /// // panic.
-    /// let p = Peripherals::take().unwrap();
+    /// let p = lpc81x::Peripherals::take().unwrap();
     /// ```
     pub fn take() -> Option<Self> {
         Some(Self::new(
-            raw::Peripherals::take()?,
-            raw::CorePeripherals::take()?,
+            target_device::Peripherals::take()?,
+            target_device::CorePeripherals::take()?,
         ))
     }
 
@@ -515,52 +308,38 @@ impl Peripherals {
     /// Since there are no means within this API to forcibly change type state,
     /// you will need to resort to something like [`core::mem::transmute`].
     pub unsafe fn steal() -> Self {
-        Self::new(
-            raw::Peripherals::steal(),
-            raw::CorePeripherals::steal(),
-        )
+        Self::new(target_device::Peripherals::steal(), target_device::CorePeripherals::steal())
     }
 
-    fn new(p: raw::Peripherals, cp: raw::CorePeripherals) -> Self {
+    fn new(p: target_device::Peripherals, cp: target_device::CorePeripherals) -> Self {
         Peripherals {
             // HAL peripherals
-            DMA   : DMA::new(p.DMA),
-            GPIO  : GPIO::new(p.GPIO_PORT),
-            I2C0  : I2C::new(p.I2C0),
-            PMU   : PMU::new(p.PMU),
-            SWM   : SWM::new(p.SWM),
+            GPIO: GPIO::new(p.GPIO_PORT),
+            I2C: I2C::new(p.I2C),
+            PMU: PMU::new(p.PMU),
+            SWM: SWM::new(p.SWM),
             SYSCON: SYSCON::new(p.SYSCON),
-            USART0: USART::new(p.USART0),
-            USART1: USART::new(p.USART1),
-            USART2: USART::new(p.USART2),
-            WKT   : WKT::new(p.WKT),
 
             // Raw peripherals
-            ADC       : p.ADC,
-            CMP       : p.CMP,
-            CRC       : p.CRC,
-            DMATRIGMUX: p.DMATRIGMUX,
-            FLASHCTRL : p.FLASHCTRL,
-            I2C1      : p.I2C1,
-            I2C2      : p.I2C2,
-            I2C3      : p.I2C3,
-            INPUTMUX  : p.INPUTMUX,
-            IOCON     : p.IOCON,
-            MRT       : p.MRT,
-            PIN_INT   : p.PIN_INT,
-            SCT       : p.SCT,
-            SPI0      : p.SPI0,
-            SPI1      : p.SPI1,
-            WWDT      : p.WWDT,
+            CMP: p.CMP,
+            CRC: p.CRC,
+            FLASHCTRL: p.FLASHCTRL,
+            IOCON: p.IOCON,
+            MRT: p.MRT,
+            PIN_INT: p.PIN_INT,
+            SCT: p.SCT,
+            SPI0: p.SPI0,
+            SPI1: p.SPI1,
+            WWDT: p.WWDT,
 
             // Core peripherals
             CPUID: cp.CPUID,
-            DCB  : cp.DCB,
-            DWT  : cp.DWT,
-            MPU  : cp.MPU,
-            NVIC : cp.NVIC,
-            SCB  : cp.SCB,
-            SYST : cp.SYST,
+            DCB: cp.DCB,
+            DWT: cp.DWT,
+            MPU: cp.MPU,
+            NVIC: cp.NVIC,
+            SCB: cp.SCB,
+            SYST: cp.SYST,
         }
     }
 }

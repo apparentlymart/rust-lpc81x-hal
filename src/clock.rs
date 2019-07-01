@@ -71,7 +71,7 @@ pub trait Frequency {
 /// ensure the passed clock is enabled.
 ///
 /// ``` rust
-/// use lpc82x_hal::clock;
+/// use lpc81x::clock;
 ///
 /// fn use_clock<C>(clock: C) where C: clock::Frequency + clock::Enabled {
 ///     // do something with the clock
@@ -82,7 +82,7 @@ pub trait Frequency {
 /// clock is enabled, and implement the `Enabled` trait conditionally.
 ///
 /// ``` rust
-/// use lpc82x_hal::{
+/// use lpc81x::{
 ///     clock,
 ///     init_state,
 /// };

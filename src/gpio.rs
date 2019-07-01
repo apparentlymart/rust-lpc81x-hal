@@ -5,29 +5,6 @@
 //! All [`Pin`] instances live in the [`swm`] module.
 //!
 //! The GPIO peripheral is described in the user manual, chapter 9.
-//!
-//! # Examples
-//!
-//! Initialize a GPIO pin and set its output to HIGH:
-//!
-//! ``` no_run
-//! use lpc82x_hal::prelude::*;
-//! use lpc82x_hal::Peripherals;
-//!
-//! let mut p = Peripherals::take().unwrap();
-//!
-//! let swm = p.SWM.split();
-//!
-//! let pio0_12 = swm.pins.pio0_12
-//!     .into_gpio_pin(&p.GPIO)
-//!     .into_output()
-//!     .set_high();
-//! ```
-//!
-//! Please refer to the [examples in the repository] for more example code.
-//!
-//! [`swm`]: ../swm/index.html
-//! [examples in the repository]: https://github.com/braun-robotics/rust-lpc82x-hal/tree/master/examples
 
 
 use embedded_hal::digital::{
@@ -37,7 +14,7 @@ use embedded_hal::digital::{
 
 use crate::{
     init_state,
-    raw,
+    target_device,
     swm::{
         pin_state,
         Pin,
@@ -60,12 +37,12 @@ use crate::{
 /// [`Peripherals`]: ../struct.Peripherals.html
 /// [module documentation]: index.html
 pub struct GPIO<State = init_state::Enabled> {
-    pub(crate) gpio  : raw::GPIO_PORT,
+    pub(crate) gpio  : target_device::GPIO_PORT,
                _state: State,
 }
 
 impl GPIO<init_state::Enabled> {
-    pub(crate) fn new(gpio: raw::GPIO_PORT) -> Self {
+    pub(crate) fn new(gpio: target_device::GPIO_PORT) -> Self {
         GPIO {
             gpio  : gpio,
             _state: init_state::Enabled(()),
@@ -127,14 +104,7 @@ impl<State> GPIO<State> {
     /// This method serves as an escape hatch from the HAL API. It returns the
     /// raw peripheral, allowing you to do whatever you want with it, without
     /// limitations imposed by the API.
-    ///
-    /// If you are using this method because a feature you need is missing from
-    /// the HAL API, please [open an issue] or, if an issue for your feature
-    /// request already exists, comment on the existing issue, so we can
-    /// prioritize it accordingly.
-    ///
-    /// [open an issue]: https://github.com/braun-robotics/rust-lpc82x-hal/issues
-    pub fn free(self) -> raw::GPIO_PORT {
+    pub fn free(self) -> target_device::GPIO_PORT {
         self.gpio
     }
 }
@@ -153,26 +123,6 @@ impl<'gpio, T, D> Pin<T, pin_state::Gpio<'gpio, D>>
     ///
     /// Consumes the pin instance and returns a new instance that is in output
     /// mode, making the methods to set the output level available.
-    ///
-    /// # Example
-    ///
-    /// ``` no_run
-    /// use lpc82x_hal::prelude::*;
-    /// use lpc82x_hal::Peripherals;
-    ///
-    /// let p = Peripherals::take().unwrap();
-    ///
-    /// let swm = p.SWM.split();
-    ///
-    /// // Transition pin into GPIO state, then set it to output
-    /// let mut pin = swm.pins.pio0_12
-    ///     .into_gpio_pin(&p.GPIO)
-    ///     .into_output();
-    ///
-    /// // Output level can now be controlled
-    /// pin.set_high();
-    /// pin.set_low();
-    /// ```
     pub fn into_output(self)
         -> Pin<T, pin_state::Gpio<'gpio, direction::Output>>
     {
@@ -211,7 +161,7 @@ impl<'gpio, T> OutputPin for Pin<T, pin_state::Gpio<'gpio, direction::Output>>
     /// [`into_output`]: #method.into_output
     fn set_high(&mut self) {
         self.state.set0.write(|w|
-            unsafe { w.setp().bits(T::MASK) }
+            unsafe { w.bits(T::MASK) }
         )
     }
 
@@ -228,7 +178,7 @@ impl<'gpio, T> OutputPin for Pin<T, pin_state::Gpio<'gpio, direction::Output>>
     /// [`into_output`]: #method.into_output
     fn set_low(&mut self) {
         self.state.clr0.write(|w|
-            unsafe { w.clrp().bits(T::MASK) }
+            unsafe { w.bits(T::MASK) }
         );
     }
 }
@@ -249,7 +199,7 @@ impl<'gpio, T> StatefulOutputPin
     /// [`into_gpio_pin`]: #method.into_gpio_pin
     /// [`into_output`]: #method.into_output
     fn is_set_high(&self) -> bool {
-        self.state.pin0.read().port().bits() & T::MASK == T::MASK
+        self.state.pin0.read().bits() & T::MASK == T::MASK
     }
 
     /// Indicates whether the pin output is currently set to LOW
@@ -264,7 +214,7 @@ impl<'gpio, T> StatefulOutputPin
     /// [`into_gpio_pin`]: #method.into_gpio_pin
     /// [`into_output`]: #method.into_output
     fn is_set_low(&self) -> bool {
-        !self.state.pin0.read().port().bits() & T::MASK == T::MASK
+        !self.state.pin0.read().bits() & T::MASK == T::MASK
     }
 }
 

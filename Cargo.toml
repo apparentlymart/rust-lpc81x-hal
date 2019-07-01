@@ -1,27 +1,22 @@
 [package]
-name    = "lpc82x-hal"
-version = "0.3.0"
-authors = ["Hanno Braun <hanno@braun-robotics.com>"]
+name    = "lpc81x"
+version = "0.1.0"
+authors = ["Martin Atkins <mart@degeneration.co.uk>"]
 edition = "2018"
 
-description   = "Hardware Abstraction Layer (HAL) for the NXP LPC82x series of ARM Cortex-M0+ microcontroller"
-documentation = "https://docs.rs/lpc82x-hal"
-repository    = "https://github.com/braun-robotics/rust-lpc82x-hal"
+description   = "Hardware Abstraction Layer (HAL) for the NXP LPC81x series of ARM Cortex-M0+ microcontrollers"
+documentation = "https://docs.rs/lpc81x"
+repository    = "https://github.com/apparentlymart/rust-lpc81x"
 license       = "0BSD"
 readme        = "README.md"
 categories    = ["embedded", "hardware-support", "no-std"]
 keywords      = ["arm", "cortex-m", "nxp", "lpc", "embedded-hal-impl"]
 
 
-[badges]
-maintenance = { status = "actively-developed" }
-travis-ci   = { repository = "braun-robotics/rust-lpc82x-hal" }
-
-
 [dependencies]
 cortex-m     = "0.5.2"
 embedded-hal = { version = "0.2", features = ["unproven"] }
-lpc82x-pac   = "0.6"
+lpc81x-pac   = "0.1.0"
 nb           = "0.1.1"
 void         = { version = "1", default-features = false }
 # This should be in [dev-dependencies], but those can't be optional. Issue:
@@ -37,24 +32,17 @@ panic-abort = "0.3.1"
 # This is needed to make the compiletest stuff optional. It requires std, which
 # means we can't build it together with the examples.
 compiletest = ["compiletest_rs"]
-rt          = ["lpc82x-pac/rt"]
+rt          = ["lpc81x-pac/rt"]
 
 
 [[example]]
 name              = "gpio"
 required-features = ["rt"]
 
-[[example]]
-name              = "i2c_vl53l0x"
-required-features = ["rt"]
 
-[[example]]
-name              = "pmu"
-required-features = ["rt"]
-
-[[example]]
-name              = "usart"
-required-features = ["rt"]
+[lib]
+test = false
+bench = false
 
 
 [profile.release]
@@ -64,8 +52,8 @@ opt-level   = "z"
 
 
 [package.metadata.release]
-pre-release-commit-message = "chore: Release version {{version}}"
-pro-release-commit-message = "chore: Bump version to {{version}}"
+pre-release-commit-message = "Release version {{version}}"
+pro-release-commit-message = "Bump version to {{version}}"
 tag-prefix                 = "v"
 tag-message                = "Version {{version}}"
 dev-version-ext            = "dev"

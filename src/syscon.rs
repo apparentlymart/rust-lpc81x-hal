@@ -15,7 +15,7 @@ use core::marker::PhantomData;
 use crate::{
     clock,
     init_state,
-    raw::{
+    target_device::{
         self,
         syscon::{
             pdruncfg,
@@ -53,11 +53,11 @@ use crate::{
 /// [`Peripherals`]: ../struct.Peripherals.html
 /// [module documentation]: index.html
 pub struct SYSCON {
-    syscon: raw::SYSCON,
+    syscon: target_device::SYSCON,
 }
 
 impl SYSCON {
-    pub(crate) fn new(syscon: raw::SYSCON) -> Self {
+    pub(crate) fn new(syscon: target_device::SYSCON) -> Self {
         SYSCON { syscon }
     }
 
@@ -100,14 +100,7 @@ impl SYSCON {
     /// This method serves as an escape hatch from the HAL API. It returns the
     /// raw peripheral, allowing you to do whatever you want with it, without
     /// limitations imposed by the API.
-    ///
-    /// If you are using this method because a feature you need is missing from
-    /// the HAL API, please [open an issue] or, if an issue for your feature
-    /// request already exists, comment on the existing issue, so we can
-    /// prioritize it accordingly.
-    ///
-    /// [open an issue]: https://github.com/braun-robotics/rust-lpc82x-hal/issues
-    pub fn free(self) -> raw::SYSCON {
+    pub fn free(self) -> target_device::SYSCON {
         self.syscon
     }
 }
@@ -388,30 +381,23 @@ macro_rules! impl_clock_control {
 }
 
 impl_clock_control!(ROM           , rom     );
-impl_clock_control!(RAM0_1        , ram0_1  );
-impl_clock_control!(raw::FLASHCTRL, flashreg);
+impl_clock_control!(target_device::FLASHCTRL, flashreg);
 impl_clock_control!(FLASH         , flash   );
-impl_clock_control!(raw::I2C0     , i2c0    );
-impl_clock_control!(raw::GPIO_PORT, gpio    );
-impl_clock_control!(raw::SWM      , swm     );
-impl_clock_control!(raw::SCT      , sct     );
-impl_clock_control!(raw::WKT      , wkt     );
-impl_clock_control!(raw::MRT      , mrt     );
-impl_clock_control!(raw::SPI0     , spi0    );
-impl_clock_control!(raw::SPI1     , spi1    );
-impl_clock_control!(raw::CRC      , crc     );
-impl_clock_control!(raw::USART0   , uart0   );
-impl_clock_control!(raw::USART1   , uart1   );
-impl_clock_control!(raw::USART2   , uart2   );
-impl_clock_control!(raw::WWDT     , wwdt    );
-impl_clock_control!(raw::IOCON    , iocon   );
-impl_clock_control!(raw::CMP      , acmp    );
-impl_clock_control!(raw::I2C1     , i2c1    );
-impl_clock_control!(raw::I2C2     , i2c2    );
-impl_clock_control!(raw::I2C3     , i2c3    );
-impl_clock_control!(raw::ADC      , adc     );
-impl_clock_control!(MTB           , mtb     );
-impl_clock_control!(raw::DMA      , dma     );
+impl_clock_control!(target_device::I2C     , i2c    );
+impl_clock_control!(target_device::GPIO_PORT, gpio    );
+impl_clock_control!(target_device::SWM      , swm     );
+impl_clock_control!(target_device::SCT      , sct     );
+impl_clock_control!(target_device::WKT      , wkt     );
+impl_clock_control!(target_device::MRT      , mrt     );
+impl_clock_control!(target_device::SPI0     , spi0    );
+impl_clock_control!(target_device::SPI1     , spi1    );
+impl_clock_control!(target_device::CRC      , crc     );
+impl_clock_control!(target_device::USART0   , uart0   );
+impl_clock_control!(target_device::USART1   , uart1   );
+impl_clock_control!(target_device::USART2   , uart2   );
+impl_clock_control!(target_device::WWDT     , wwdt    );
+impl_clock_control!(target_device::IOCON    , iocon   );
+impl_clock_control!(target_device::CMP      , acmp    );
 
 
 /// Internal trait for controlling peripheral reset
@@ -453,24 +439,18 @@ macro_rules! impl_reset_control {
     }
 }
 
-impl_reset_control!(raw::SPI0     , spi0_rst_n   );
-impl_reset_control!(raw::SPI1     , spi1_rst_n   );
+impl_reset_control!(target_device::SPI0     , spi0_rst_n   );
+impl_reset_control!(target_device::SPI1     , spi1_rst_n   );
 impl_reset_control!(UARTFRG       , uartfrg_rst_n);
-impl_reset_control!(raw::USART0   , uart0_rst_n  );
-impl_reset_control!(raw::USART1   , uart1_rst_n  );
-impl_reset_control!(raw::USART2   , uart2_rst_n  );
-impl_reset_control!(raw::I2C0     , i2c0_rst_n   );
-impl_reset_control!(raw::MRT      , mrt_rst_n    );
-impl_reset_control!(raw::SCT      , sct_rst_n    );
-impl_reset_control!(raw::WKT      , wkt_rst_n    );
-impl_reset_control!(raw::GPIO_PORT, gpio_rst_n   );
-impl_reset_control!(raw::FLASHCTRL, flash_rst_n  );
-impl_reset_control!(raw::CMP      , acmp_rst_n   );
-impl_reset_control!(raw::I2C1     , i2c1_rst_n   );
-impl_reset_control!(raw::I2C2     , i2c2_rst_n   );
-impl_reset_control!(raw::I2C3     , i2c3_rst_n   );
-impl_reset_control!(raw::ADC      , adc_rst_n    );
-impl_reset_control!(raw::DMA      , dma_rst_n    );
+impl_reset_control!(target_device::USART1   , uart1_rst_n  );
+impl_reset_control!(target_device::USART2   , uart2_rst_n  );
+impl_reset_control!(target_device::I2C     , i2c_rst_n   );
+impl_reset_control!(target_device::MRT      , mrt_rst_n    );
+impl_reset_control!(target_device::SCT      , sct_rst_n    );
+impl_reset_control!(target_device::WKT      , wkt_rst_n    );
+impl_reset_control!(target_device::GPIO_PORT, gpio_rst_n   );
+impl_reset_control!(target_device::FLASHCTRL, flash_rst_n  );
+impl_reset_control!(target_device::CMP      , acmp_rst_n   );
 
 
 /// Internal trait for powering analog blocks
@@ -514,11 +494,10 @@ impl_analog_block!(IRCOUT   , ircout_pd );
 impl_analog_block!(IRC      , irc_pd    );
 impl_analog_block!(FLASH    , flash_pd  );
 impl_analog_block!(BOD      , bod_pd    );
-impl_analog_block!(raw::ADC , adc_pd    );
 impl_analog_block!(SYSOSC   , sysosc_pd );
-impl_analog_block!(raw::WWDT, wdtosc_pd );
+impl_analog_block!(target_device::WWDT, wdtosc_pd );
 impl_analog_block!(SYSPLL   , syspll_pd );
-impl_analog_block!(raw::CMP , acmp      );
+impl_analog_block!(target_device::CMP , acmp      );
 
 
 /// The 750 kHz IRC-derived clock
@@ -617,25 +596,16 @@ macro_rules! wakeup_interrupt {
     }
 }
 
-wakeup_interrupt!(Spi0Wakeup  , spi0);
-wakeup_interrupt!(Spi1Wakeup  , spi1);
-wakeup_interrupt!(Usart0Wakeup, usart0);
-wakeup_interrupt!(Usart1Wakeup, usart1);
-wakeup_interrupt!(Usart2Wakeup, usart2);
-wakeup_interrupt!(I2c1Wakeup  , i2c1  );
-wakeup_interrupt!(I2c0Wakeup  , i2c0  );
 wakeup_interrupt!(WwdtWakeup  , wwdt  );
 wakeup_interrupt!(BodWakeup   , bod   );
 wakeup_interrupt!(WktWakeup   , wkt   );
-wakeup_interrupt!(I2c2Wakeup  , i2c2  );
-wakeup_interrupt!(I2c3Wakeup  , i2c3  );
 
 
-reg!(PDRUNCFG     , PDRUNCFG     , raw::SYSCON, pdruncfg     );
-reg!(PRESETCTRL   , PRESETCTRL   , raw::SYSCON, presetctrl   );
-reg!(STARTERP1    , STARTERP1    , raw::SYSCON, starterp1    );
-reg!(SYSAHBCLKCTRL, SYSAHBCLKCTRL, raw::SYSCON, sysahbclkctrl);
+reg!(PDRUNCFG     , PDRUNCFG     , target_device::SYSCON, pdruncfg     );
+reg!(PRESETCTRL   , PRESETCTRL   , target_device::SYSCON, presetctrl   );
+reg!(STARTERP1    , STARTERP1    , target_device::SYSCON, starterp1    );
+reg!(SYSAHBCLKCTRL, SYSAHBCLKCTRL, target_device::SYSCON, sysahbclkctrl);
 
-reg!(UARTCLKDIV , UARTCLKDIV   , raw::SYSCON, uartclkdiv );
-reg!(UARTFRGDIV , UARTFRGDIV   , raw::SYSCON, uartfrgdiv );
-reg!(UARTFRGMULT, UARTFRGMULT  , raw::SYSCON, uartfrgmult);
+reg!(UARTCLKDIV , UARTCLKDIV   , target_device::SYSCON, uartclkdiv );
+reg!(UARTFRGDIV , UARTFRGDIV   , target_device::SYSCON, uartfrgdiv );
+reg!(UARTFRGMULT, UARTFRGMULT  , target_device::SYSCON, uartfrgmult);

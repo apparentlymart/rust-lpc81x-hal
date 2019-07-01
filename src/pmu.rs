@@ -4,29 +4,6 @@
 //! documentation for additional information.
 //!
 //! The PMU is described in the user manual, chapter 6.
-//!
-//! # Examples
-//!
-//! Use the PMU to enter sleep mode:
-//!
-//! ``` no_run
-//! use lpc82x_hal::{
-//!     raw,
-//!     Peripherals,
-//! };
-//!
-//! let mut p = Peripherals::take().unwrap();
-//!
-//! let mut pmu = p.PMU.split();
-//!
-//! // Enters sleep mode. Unless we set up some interrupts, we won't wake up
-//! // from this again.
-//! pmu.handle.enter_sleep_mode(&mut p.SCB);
-//! ```
-//!
-//! Please refer to the [examples in the repository] for more example code.
-//!
-//! [examples in the repository]: https://github.com/braun-robotics/rust-lpc82x-hal/tree/master/examples
 
 
 use cortex_m::{
@@ -37,7 +14,7 @@ use cortex_m::{
 use crate::{
     clock,
     init_state,
-    raw,
+    target_device,
 };
 
 
@@ -58,11 +35,11 @@ use crate::{
 /// [`Peripherals`]: ../struct.Peripherals.html
 /// [module documentation]: index.html
 pub struct PMU {
-    pmu: raw::PMU,
+    pmu: target_device::PMU,
 }
 
 impl PMU {
-    pub(crate) fn new(pmu: raw::PMU) -> Self {
+    pub(crate) fn new(pmu: target_device::PMU) -> Self {
         PMU { pmu }
     }
 
@@ -85,14 +62,7 @@ impl PMU {
     /// This method serves as an escape hatch from the HAL API. It returns the
     /// raw peripheral, allowing you to do whatever you want with it, without
     /// limitations imposed by the API.
-    ///
-    /// If you are using this method because a feature you need is missing from
-    /// the HAL API, please [open an issue] or, if an issue for your feature
-    /// request already exists, comment on the existing issue, so we can
-    /// prioritize it accordingly.
-    ///
-    /// [open an issue]: https://github.com/braun-robotics/rust-lpc82x-hal/issues
-    pub fn free(self) -> raw::PMU {
+    pub fn free(self) -> target_device::PMU {
         self.pmu
     }
 }
@@ -124,7 +94,7 @@ pub struct Parts {
 ///
 /// [module documentation]: index.html
 pub struct Handle {
-    pmu: raw::PMU,
+    pmu: target_device::PMU,
 }
 
 impl Handle {
@@ -132,7 +102,7 @@ impl Handle {
     ///
     /// The microcontroller will wake up from sleep mode, if an NVIC-enabled
     /// interrupt occurs. See user manual, section 6.7.4.3.
-    pub fn enter_sleep_mode(&mut self, scb: &mut raw::SCB) {
+    pub fn enter_sleep_mode(&mut self, scb: &mut target_device::SCB) {
         interrupt::free(|_| {
             // Default power mode indicates active or sleep mode.
             self.pmu.pcon.modify(|_, w|
@@ -173,7 +143,7 @@ impl Handle {
     /// Please make sure that the peripheral states configured in PDAWAKECFG
     /// match the peripheral states as tracked by the API before calling this
     /// method.
-    pub unsafe fn enter_deep_sleep_mode(&mut self, scb: &mut raw::SCB) {
+    pub unsafe fn enter_deep_sleep_mode(&mut self, scb: &mut target_device::SCB) {
         interrupt::free(|_| {
             self.pmu.pcon.modify(|_, w|
                 w.pm().deep_sleep_mode()
@@ -213,7 +183,7 @@ impl Handle {
     /// Please make sure that the peripheral states configured in PDAWAKECFG
     /// match the peripheral states as tracked by the API before calling this
     /// method.
-    pub unsafe fn enter_power_down_mode(&mut self, scb: &mut raw::SCB) {
+    pub unsafe fn enter_power_down_mode(&mut self, scb: &mut target_device::SCB) {
         interrupt::free(|_| {
             self.pmu.pcon.modify(|_, w|
                 w.pm().power_down_mode()

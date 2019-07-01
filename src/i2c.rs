@@ -4,52 +4,13 @@
 //! important things missing. Please be careful when using this API.
 //!
 //! The I2C peripherals are described in the user manual, chapter 15.
-//!
-//! # Examples
-//!
-//! Write data to an I2C slave:
-//!
-//! ``` no_run
-//! # let address = 0x0;
-//! # let data    = [0; 8];
-//! #
-//! use lpc82x_hal::prelude::*;
-//! use lpc82x_hal::Peripherals;
-//!
-//! let mut p = Peripherals::take().unwrap();
-//!
-//! let mut swm    = p.SWM.split();
-//! let mut syscon = p.SYSCON.split();
-//!
-//! let (i2c0_sda, _) = swm.fixed_functions.i2c0_sda.assign(
-//!     swm.pins.pio0_11.into_swm_pin(),
-//!     &mut swm.handle,
-//! );
-//! let (i2c0_scl, _) = swm.fixed_functions.i2c0_scl.assign(
-//!     swm.pins.pio0_10.into_swm_pin(),
-//!     &mut swm.handle,
-//! );
-//!
-//! let mut i2c = p.I2C0.enable(
-//!     &mut syscon.handle,
-//!     i2c0_sda,
-//!     i2c0_scl,
-//! );
-//!
-//! i2c.write(address, &data)
-//!     .expect("Failed to write data");
-//! ```
-//!
-//! Please refer to the [examples in the repository] for more example code.
-//!
-//! [examples in the repository]: https://github.com/braun-robotics/rust-lpc82x-hal/tree/master/examples
 
 
 use embedded_hal::blocking::i2c;
 
 use crate::{
     init_state,
-    raw,
+    target_device,
     swm::{
         self,
         I2C0_SCL,
@@ -61,28 +22,16 @@ use crate::{
 };
 
 
-/// Interface to an I2C peripheral
+/// Interface to the I2C peripheral
 ///
 /// Please refer to the [module documentation] for more information.
-///
-/// # Limitations
-///
-/// This API has the following limitations:
-/// - Only I2C0 is supported.
-/// - Only master mode is supported.
-/// - Errors are not handled.
-///
-/// Additional limitations are documented on the specific methods that they
-/// apply to.
-///
-/// [module documentation]: index.html
 pub struct I2C<State = init_state::Enabled> {
-    i2c   : raw::I2C0,
+    i2c   : target_device::I2C,
     _state: State,
 }
 
 impl I2C<init_state::Disabled> {
-    pub(crate) fn new(i2c: raw::I2C0) -> Self {
+    pub(crate) fn new(i2c: target_device::I2C) -> Self {
         I2C {
             i2c   : i2c,
             _state: init_state::Disabled,
@@ -130,14 +79,14 @@ impl I2C<init_state::Disabled> {
         // precise).
         // None of that is correct, of course. When actually running, I'm
         // measuring an SCL frequency of 79.6 kHz. I wish I knew why.
-        self.i2c.clkdiv.write(|w| unsafe { w.divval().bits(7) });
+        self.i2c.div.write(|w| unsafe { w.divval().bits(7) });
 
         // SCL low and high times are left at their default values (two clock
         // cycles each). See user manual, section 15.6.9.
 
         // Enable master mode
         // Set all other configuration values to default.
-        self.i2c.cfg.write(|w| w.msten().enabled());
+        self.i2c.cfg.write(|w| w.msten()  );
 
         I2C {
             i2c   : self.i2c,
@@ -238,7 +187,7 @@ impl<State> I2C<State> {
     /// prioritize it accordingly.
     ///
     /// [open an issue]: https://github.com/braun-robotics/rust-lpc82x-hal/issues
-    pub fn free(self) -> raw::I2C0 {
+    pub fn free(self) -> target_device::I2C {
         self.i2c
     }
 }
