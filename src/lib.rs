@@ -3,5 +3,4 @@
 
 pub extern crate lpc81x_pac as lpc81x;
 
-pub mod gpio;
-pub mod swm;
+pub mod pins;
