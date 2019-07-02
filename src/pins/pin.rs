@@ -1,4 +1,5 @@
 use super::{mode, Pin, PinMode};
+use crate::Peripherals;
 use core::marker::PhantomData;
 
 macro_rules! pin {
@@ -35,17 +36,16 @@ macro_rules! pin {
             /// Use the `OutputPin` trait methods to change the pin state after
             /// initial configuration.
             pub fn to_digital_output(self, high: bool) -> $name<mode::DigitalOutput> {
-                /*
+                let p = Peripherals::pac();
+
                 // Set output state first, so that we won't be briefly in the
                 // wrong state when we activate the output.
                 if high {
-                    self.regs
-                        .gpio
+                    p.GPIO_PORT
                         .set0
                         .write(|w| unsafe { w.bits(Self::REG_MASK) });
                 } else {
-                    self.regs
-                        .gpio
+                    p.GPIO_PORT
                         .clr0
                         .write(|w| unsafe { w.bits(Self::REG_MASK) });
                 }
@@ -53,17 +53,11 @@ macro_rules! pin {
                 // configured to be a GPIO then we'll start driving the pin
                 // after this step.
                 // FIXME: This isn't thread safe.
-                self.regs
-                    .gpio
+                p.GPIO_PORT
                     .dir0
                     .modify(|r, w| unsafe { w.bits(r.bits() | Self::REG_MASK) });
 
-                $name {
-                    regs: self.regs,
-                    _0: PhantomData,
-                }
-                */
-                panic!("Unimplemented")
+                $name(PhantomData)
             }
         }
 
