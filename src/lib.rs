@@ -7,8 +7,6 @@ pub use lpc81x::NVIC_PRIO_BITS;
 
 pub mod pins;
 
-static mut PAC_PERIPHERALS: Option<lpc81x::Peripherals> = None;
-
 /// Singleton container for the peripherals modeled by this HAL crate.
 pub struct Peripherals {
     /// The main accessors for the device pins.
@@ -30,6 +28,12 @@ impl Peripherals {
         }
     }
 
+    // Can be called only from methods on objects that are only accessible
+    // (directly or indirectly) from a Peripherals instance.
+    fn pac() -> lpc81x::Peripherals {
+        unsafe { lpc81x::Peripherals::steal() }
+    }
+
     /// Obtain (only once) the singleton Peripherals object.
     ///
     /// On subsequent calls, returns `None`.
@@ -39,17 +43,12 @@ impl Peripherals {
         // interrupts while managing its own static mut variable to track
         // whether the singleton was already taken.
         match lpc81x::Peripherals::take() {
-            Some(p) => {
-                unsafe { PAC_PERIPHERALS = Some(p) }
-                Some(Self::new())
-            }
+            Some(_) => Some(Self::new()),
             None => None,
         }
     }
 
     pub unsafe fn steal() -> Self {
-        let p = lpc81x::Peripherals::steal();
-        PAC_PERIPHERALS = Some(p);
         Self::new()
     }
 
@@ -62,9 +61,9 @@ impl Peripherals {
     /// Returns the PAC-level peripherals while leaving the caller with ownership
     /// of the HAL-level peripherals too.
     ///
-    /// Although the caller will still have ownership of the HAL-level
-    /// peripherals, any subsequent actions taken on them will panic.
+    /// This is unsafe because the raw PAC peripherals API may be used to
+    /// reconfigure the hardware in a way that the HAL isn't aware of.
     pub unsafe fn steal_pac(&self) -> lpc81x::Peripherals {
-        core::mem::replace(&mut PAC_PERIPHERALS, None).unwrap()
+        Self::pac()
     }
 }
