@@ -9,3 +9,8 @@ cortex-m = "0.6.0"
 embedded-hal = { version = "0.2.3", features = ["unproven"] }
 lpc81x-pac = "0.1.0"
 void = "1.0.2"
+
+[dev-dependencies]
+cortex-m-rt = "0.6.8"
+cortex-m-rtfm = "0.4.3"
+panic-halt = "0.2.0"
