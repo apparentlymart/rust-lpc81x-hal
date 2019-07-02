@@ -5,7 +5,11 @@ macro_rules! pin {
     ($name:ident, $assign_v:expr) => {
         pub struct $name<MODE: PinMode>(PhantomData<MODE>);
 
-        impl $name<mode::Unassigned> {
+        impl<MODE: super::PinMode> $name<MODE> {
+            pub(crate) fn new() -> Self {
+                Self(PhantomData)
+            }
+
             /// Obtain the input portion of the pin.
             ///
             /// Input functions can coexist on the same pin, so the input
@@ -17,7 +21,9 @@ macro_rules! pin {
             pub fn digital_input(&self) -> $name<mode::DigitalInput> {
                 $name::<mode::DigitalInput>(PhantomData)
             }
+        }
 
+        impl $name<mode::Unassigned> {
             /// Configure the pin's output portion for general-purpose digital
             /// output.
             ///

@@ -1,3 +1,5 @@
+//! I/O pin handling.
+
 pub mod mode;
 pub mod pin;
 
@@ -166,6 +168,30 @@ pub struct Pins {
     pub gpio17: pin::Pin17<mode::Unassigned>,
 }
 
+impl Pins {
+    pub(crate) fn new() -> Self {
+        Self {
+            gpio0: pin::Pin0::new(),
+            gpio1: pin::Pin1::new(),
+            gpio2: pin::Pin2::new(),
+            gpio4: pin::Pin4::new(),
+            gpio5: pin::Pin5::new(),
+            gpio6: pin::Pin6::new(),
+            gpio7: pin::Pin7::new(),
+            gpio8: pin::Pin8::new(),
+            gpio9: pin::Pin9::new(),
+            gpio10: pin::Pin10::new(),
+            gpio11: pin::Pin11::new(),
+            gpio12: pin::Pin12::new(),
+            gpio13: pin::Pin13::new(),
+            gpio14: pin::Pin14::new(),
+            gpio15: pin::Pin15::new(),
+            gpio16: pin::Pin16::new(),
+            gpio17: pin::Pin17::new(),
+        }
+    }
+}
+
 /// Represents the digital input parts of each of the general-purpose I/O pins.
 ///
 /// Because multiple input functions can coexist on a single pin, the input
@@ -243,4 +269,29 @@ pub struct PinInputs {
 
     /// GPIO pin 17.
     pub gpio17: pin::Pin17<mode::DigitalInput>,
+}
+
+impl PinInputs {
+    pub(crate) fn new() -> Self {
+        Self {
+            gpio0: pin::Pin0::new(),
+            gpio1: pin::Pin1::new(),
+            gpio2: pin::Pin2::new(),
+            gpio3: pin::Pin3::new(),
+            gpio4: pin::Pin4::new(),
+            gpio5: pin::Pin5::new(),
+            gpio6: pin::Pin6::new(),
+            gpio7: pin::Pin7::new(),
+            gpio8: pin::Pin8::new(),
+            gpio9: pin::Pin9::new(),
+            gpio10: pin::Pin10::new(),
+            gpio11: pin::Pin11::new(),
+            gpio12: pin::Pin12::new(),
+            gpio13: pin::Pin13::new(),
+            gpio14: pin::Pin14::new(),
+            gpio15: pin::Pin15::new(),
+            gpio16: pin::Pin16::new(),
+            gpio17: pin::Pin17::new(),
+        }
+    }
 }
