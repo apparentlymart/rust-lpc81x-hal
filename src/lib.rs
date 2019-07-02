@@ -48,6 +48,8 @@ impl Peripherals {
     }
 
     pub unsafe fn steal() -> Self {
+        let p = lpc81x::Peripherals::steal();
+        PAC_PERIPHERALS = Some(p);
         Self::new()
     }
 
