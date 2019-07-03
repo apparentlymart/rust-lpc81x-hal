@@ -3,6 +3,8 @@
 pub mod mode;
 pub mod pin;
 
+pub(crate) const PINASSIGN_NOTHING: u8 = 0xff;
+
 // Trait implemented by types that represent switchable pins.
 //
 // Only types in the `lpx81x-hal` crate may implement this trait.

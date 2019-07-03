@@ -7,7 +7,7 @@ pub mod mode;
 pub mod word;
 
 macro_rules! spi_device {
-    ($typename:ident) => {
+    ($typename:ident, { SCLK: ($sclkassign:ident, $sclkfield:ident) }) => {
         pub struct $typename<MODE, SCLK, MOSI, MISO, SSEL>
         where
             MODE: Mode,
@@ -40,6 +40,11 @@ macro_rules! spi_device {
                     ssel: PhantomData,
                 }
             }
+
+            fn select_sclk(pin: u8) {
+                let swm = lpc81x_pac::SWM::ptr();
+                unsafe { (*swm).$sclkassign.modify(|_, w| w.$sclkfield().bits(pin)) }
+            }
         }
 
         impl<MODE, SCLK, MOSI, MISO, SSEL> !Sync for $typename<MODE, SCLK, MOSI, MISO, SSEL> {}
@@ -69,8 +74,9 @@ macro_rules! spi_device {
                 pins::mode::Unassigned,
                 pins::mode::Unassigned,
             > {
+                Self::select_sclk(SCLK::NUMBER);
                 unused(sclk);
-                panic!("not implemented");
+                $typename::new()
             }
 
             /// Consumes the inactive SPI bus and returns it with device mode enabled,
@@ -85,8 +91,9 @@ macro_rules! spi_device {
                 pins::mode::Unassigned,
                 pins::mode::Unassigned,
             > {
+                Self::select_sclk(SCLK::NUMBER);
                 unused(sclk);
-                panic!("not implemented");
+                $typename::new()
             }
         }
 
@@ -335,14 +342,15 @@ macro_rules! spi_device {
                 >,
                 SCLK,
             ) {
-                panic!("not implemented");
+                Self::select_sclk(pins::PINASSIGN_NOTHING);
+                ($typename::new(), pin_type_as_is())
             }
         }
     };
 }
 
-spi_device!(SPI0);
-spi_device!(SPI1);
+spi_device!(SPI0, { SCLK: (pinassign3, spi0_sck_io) });
+spi_device!(SPI1, { SCLK: (pinassign4, spi1_sck_io) });
 
 // Represents SPI modes.
 //
@@ -350,3 +358,13 @@ spi_device!(SPI1);
 pub unsafe trait Mode {}
 
 fn unused<T>(_v: T) {}
+
+// Helper function for creating "instances" of our zero-length pin types
+// without needing to state their names, when we're releasing/deactivating
+// pins.
+fn pin_type_as_is<T: pins::Pin>() -> T {
+    // This is safe because our pin types are zero-length anyway, and so
+    // "filling them with zeroes" is indistinguishable from properly
+    // initializing them.
+    unsafe { core::mem::zeroed() }
+}
