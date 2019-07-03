@@ -83,11 +83,25 @@ macro_rules! pin {
             type Error = !;
 
             fn set_high(&mut self) -> Result<(), !> {
-                panic!("unimplemented");
+                let gpio = lpc81x_pac::GPIO_PORT::ptr();
+                unsafe { (*gpio).set0.write(|w| w.bits(Self::REG_MASK)) };
+                Ok(())
             }
 
             fn set_low(&mut self) -> Result<(), !> {
-                panic!("unimplemented");
+                let gpio = lpc81x_pac::GPIO_PORT::ptr();
+                unsafe { (*gpio).clr0.write(|w| w.bits(Self::REG_MASK)) };
+                Ok(())
+            }
+        }
+
+        impl embedded_hal::digital::v2::ToggleableOutputPin for $name<mode::DigitalOutput> {
+            type Error = !;
+
+            fn toggle(&mut self) -> Result<(), !> {
+                let gpio = lpc81x_pac::GPIO_PORT::ptr();
+                unsafe { (*gpio).not0.write(|w| w.bits(Self::REG_MASK)) };
+                Ok(())
             }
         }
 

@@ -33,7 +33,7 @@ const APP: () = {
 
     #[exception(resources = [GPIO17])]
     fn SysTick() {
-        use embedded_hal::digital::v2::OutputPin;
-        resources.GPIO17.set_high().unwrap();
+        use embedded_hal::digital::v2::ToggleableOutputPin;
+        resources.GPIO17.toggle().unwrap();
     }
 };
