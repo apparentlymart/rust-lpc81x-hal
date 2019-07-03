@@ -3,11 +3,14 @@
 use crate::pins;
 use core::marker::PhantomData;
 
+pub mod cfg;
 pub mod mode;
 pub mod word;
 
 macro_rules! spi_device {
-    ($typename:ident, {
+    ($typename:ident, $fieldname:ident, {
+        RESETCTRL: $resetctrlfield:ident,
+        CLKCTRL: $clkctrlfield:ident,
         SCLK: ($sclkassign:ident, $sclkfield:ident),
         MOSI: ($mosiassign:ident, $mosifield:ident),
         MISO: ($misoassign:ident, $misofield:ident),
@@ -66,9 +69,77 @@ macro_rules! spi_device {
             }
 
             #[inline(always)]
-            fn select_ssel(pin: u8) {
+            fn select_ssel(pin: u8, polarity: cfg::Polarity) {
                 let swm = lpc81x_pac::SWM::ptr();
+                let periph = lpc81x_pac::$typename::ptr();
                 unsafe { (*swm).$sselassign.modify(|_, w| w.$sselfield().bits(pin)) }
+                unsafe {
+                    (*periph).cfg.modify(|_, w| {
+                        w.spol().bit(if let cfg::Polarity::ActiveHigh = polarity {
+                            true
+                        } else {
+                            false
+                        })
+                    })
+                }
+            }
+
+            #[inline(always)]
+            fn set_enabled(enabled: bool, host: bool, cfg: cfg::Config) {
+                let syscon = lpc81x_pac::SYSCON::ptr();
+                let periph = lpc81x_pac::$typename::ptr();
+                unsafe {
+                    // Take the device out of reset first
+                    (*syscon)
+                        .presetctrl
+                        .modify(|_, w| w.$resetctrlfield().bit(enabled));
+                    (*periph).cfg.modify(|_, w| {
+                        w.enable()
+                            .bit(enabled)
+                            .master()
+                            .bit(host)
+                            .lsbf()
+                            .bit(if let cfg::BitOrder::LSBFirst = cfg.bit_order {
+                                true
+                            } else {
+                                false
+                            })
+                            .cpha()
+                            .bit(
+                                if let embedded_hal::spi::Phase::CaptureOnSecondTransition =
+                                    cfg.sclk_mode.phase
+                                {
+                                    true
+                                } else {
+                                    false
+                                },
+                            )
+                            .cpol()
+                            .bit(
+                                if let embedded_hal::spi::Polarity::IdleHigh =
+                                    cfg.sclk_mode.polarity
+                                {
+                                    true
+                                } else {
+                                    false
+                                },
+                            )
+                    })
+                }
+            }
+
+            #[inline(always)]
+            fn set_spi_clock(active: bool) {
+                let syscon = lpc81x_pac::SYSCON::ptr();
+                unsafe {
+                    (*syscon).sysahbclkctrl.modify(|_, w| {
+                        if active {
+                            w.$clkctrlfield().enable()
+                        } else {
+                            w.$clkctrlfield().disable()
+                        }
+                    })
+                }
             }
         }
 
@@ -92,6 +163,7 @@ macro_rules! spi_device {
             pub fn activate_as_host<SCLK: pins::UnassignedPin>(
                 self,
                 sclk: SCLK,
+                cfg: cfg::Config,
             ) -> $typename<
                 mode::Host,
                 pins::mode::Assigned<SCLK>,
@@ -99,6 +171,8 @@ macro_rules! spi_device {
                 pins::mode::Unassigned,
                 pins::mode::Unassigned,
             > {
+                Self::set_spi_clock(true);
+                Self::set_enabled(true, true, cfg);
                 Self::select_sclk(SCLK::NUMBER);
                 unused(sclk);
                 $typename::new()
@@ -109,6 +183,7 @@ macro_rules! spi_device {
             pub fn activate_as_device<SCLK: pins::InputPin>(
                 self,
                 sclk: SCLK,
+                cfg: cfg::Config,
             ) -> $typename<
                 mode::Device,
                 pins::mode::Assigned<SCLK>,
@@ -116,6 +191,8 @@ macro_rules! spi_device {
                 pins::mode::Unassigned,
                 pins::mode::Unassigned,
             > {
+                Self::set_spi_clock(true);
+                Self::set_enabled(true, false, cfg);
                 Self::select_sclk(SCLK::NUMBER);
                 unused(sclk);
                 $typename::new()
@@ -212,8 +289,9 @@ macro_rules! spi_device {
             pub fn with_ssel<SSEL: pins::UnassignedPin>(
                 self,
                 ssel: SSEL,
+                polarity: cfg::Polarity,
             ) -> $typename<MODE, SCLK, MOSI, MISO, pins::mode::Assigned<SSEL>> {
-                Self::select_ssel(SSEL::NUMBER);
+                Self::select_ssel(SSEL::NUMBER, polarity);
                 unused(ssel);
                 $typename::new()
             }
@@ -292,7 +370,7 @@ macro_rules! spi_device {
                 $typename<MODE, SCLK, MOSI, MISO, pins::mode::Unassigned>,
                 SSEL,
             ) {
-                Self::select_ssel(pins::PINASSIGN_NOTHING);
+                Self::select_ssel(pins::PINASSIGN_NOTHING, cfg::Polarity::ActiveLow);
                 ($typename::new(), pin_type_as_is())
             }
         }
@@ -320,20 +398,26 @@ macro_rules! spi_device {
                 >,
                 SCLK,
             ) {
+                Self::set_enabled(false, false, cfg::RESET_CONFIG);
                 Self::select_sclk(pins::PINASSIGN_NOTHING);
+                Self::set_spi_clock(false);
                 ($typename::new(), pin_type_as_is())
             }
         }
     };
 }
 
-spi_device!(SPI0, {
+spi_device!(SPI0, spi0, {
+    RESETCTRL: spi0_rst_n,
+    CLKCTRL: spi0,
     SCLK: (pinassign3, spi0_sck_io),
     MOSI: (pinassign4, spi0_mosi_io),
     MISO: (pinassign4, spi0_miso_io),
     SSEL: (pinassign4, spi0_ssel_io)
 });
-spi_device!(SPI1, {
+spi_device!(SPI1, spi1, {
+    RESETCTRL: spi1_rst_n,
+    CLKCTRL: spi1,
     SCLK: (pinassign4, spi1_sck_io),
     MOSI: (pinassign5, spi1_mosi_io),
     MISO: (pinassign5, spi1_miso_io),
