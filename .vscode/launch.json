@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "request": "launch",
+      "type": "cortex-debug",
+      "name": "rtfm example",
+      "servertype": "openocd",
+      "cwd": "${workspaceRoot}",
+      "executable": "${workspaceRoot}/target/thumbv6m-none-eabi/debug/examples/rtfm",
+      "configFiles": ["${workspaceRoot}/openocd.cfg"],
+      "runToMain": false,
+      "postLaunchCommands": ["br rust_begin_unwind"],
+      "svdFile": "${workspaceRoot}/lpc800-v0.3.svd"
+    }
+  ]
+}
