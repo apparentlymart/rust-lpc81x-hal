@@ -1,5 +1,4 @@
 use super::{mode, Pin, PinMode};
-use crate::Peripherals;
 use core::marker::PhantomData;
 
 macro_rules! pin {
@@ -24,6 +23,8 @@ macro_rules! pin {
             }
         }
 
+        impl<MODE: super::PinMode> !Sync for $name<MODE> {}
+
         impl $name<mode::Unassigned> {
             /// Configure the pin's output portion for general-purpose digital
             /// output.
@@ -36,26 +37,23 @@ macro_rules! pin {
             /// Use the `OutputPin` trait methods to change the pin state after
             /// initial configuration.
             pub fn to_digital_output(self, high: bool) -> $name<mode::DigitalOutput> {
-                let p = Peripherals::pac();
+                let gpio = lpc81x_pac::GPIO_PORT::ptr();
 
                 // Set output state first, so that we won't be briefly in the
                 // wrong state when we activate the output.
                 if high {
-                    p.GPIO_PORT
-                        .set0
-                        .write(|w| unsafe { w.bits(Self::REG_MASK) });
+                    unsafe { (*gpio).set0.write(|w| w.bits(Self::REG_MASK)) }
                 } else {
-                    p.GPIO_PORT
-                        .clr0
-                        .write(|w| unsafe { w.bits(Self::REG_MASK) });
+                    unsafe { (*gpio).clr0.write(|w| w.bits(Self::REG_MASK)) }
                 }
                 // Now put the pin in output mode. If the pin was already
                 // configured to be a GPIO then we'll start driving the pin
                 // after this step.
-                // FIXME: This isn't thread safe.
-                p.GPIO_PORT
-                    .dir0
-                    .modify(|r, w| unsafe { w.bits(r.bits() | Self::REG_MASK) });
+                unsafe {
+                    (*gpio)
+                        .dir0
+                        .modify(|r, w| w.bits(r.bits() | Self::REG_MASK));
+                }
 
                 $name(PhantomData)
             }
