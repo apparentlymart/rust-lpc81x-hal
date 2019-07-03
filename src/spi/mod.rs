@@ -7,7 +7,12 @@ pub mod mode;
 pub mod word;
 
 macro_rules! spi_device {
-    ($typename:ident, { SCLK: ($sclkassign:ident, $sclkfield:ident) }) => {
+    ($typename:ident, {
+        SCLK: ($sclkassign:ident, $sclkfield:ident),
+        MOSI: ($mosiassign:ident, $mosifield:ident),
+        MISO: ($misoassign:ident, $misofield:ident),
+        SSEL: ($sselassign:ident, $sselfield:ident)
+    }) => {
         pub struct $typename<MODE, SCLK, MOSI, MISO, SSEL>
         where
             MODE: Mode,
@@ -31,6 +36,7 @@ macro_rules! spi_device {
             MISO: pins::PinAssignment,
             SSEL: pins::PinAssignment,
         {
+            #[inline(always)]
             pub(crate) fn new() -> Self {
                 Self {
                     mode: PhantomData,
@@ -41,9 +47,28 @@ macro_rules! spi_device {
                 }
             }
 
+            #[inline(always)]
             fn select_sclk(pin: u8) {
                 let swm = lpc81x_pac::SWM::ptr();
                 unsafe { (*swm).$sclkassign.modify(|_, w| w.$sclkfield().bits(pin)) }
+            }
+
+            #[inline(always)]
+            fn select_mosi(pin: u8) {
+                let swm = lpc81x_pac::SWM::ptr();
+                unsafe { (*swm).$mosiassign.modify(|_, w| w.$mosifield().bits(pin)) }
+            }
+
+            #[inline(always)]
+            fn select_miso(pin: u8) {
+                let swm = lpc81x_pac::SWM::ptr();
+                unsafe { (*swm).$misoassign.modify(|_, w| w.$misofield().bits(pin)) }
+            }
+
+            #[inline(always)]
+            fn select_ssel(pin: u8) {
+                let swm = lpc81x_pac::SWM::ptr();
+                unsafe { (*swm).$sselassign.modify(|_, w| w.$sselfield().bits(pin)) }
             }
         }
 
@@ -126,8 +151,9 @@ macro_rules! spi_device {
                 self,
                 mosi: MOSI,
             ) -> $typename<mode::Host, SCLK, pins::mode::Assigned<MOSI>, MISO, SSEL> {
+                Self::select_mosi(MOSI::NUMBER);
                 unused(mosi);
-                panic!("not implemented");
+                $typename::new()
             }
         }
 
@@ -138,8 +164,9 @@ macro_rules! spi_device {
                 self,
                 miso: MISO,
             ) -> $typename<mode::Host, SCLK, MOSI, pins::mode::Assigned<MISO>, SSEL> {
+                Self::select_miso(MISO::NUMBER);
                 unused(miso);
-                panic!("not implemented");
+                $typename::new()
             }
         }
 
@@ -150,8 +177,9 @@ macro_rules! spi_device {
                 self,
                 ssel: SSEL,
             ) -> $typename<mode::Host, SCLK, MOSI, MISO, pins::mode::Assigned<SSEL>> {
+                Self::select_ssel(SSEL::NUMBER);
                 unused(ssel);
-                panic!("not implemented");
+                $typename::new()
             }
         }
 
@@ -205,8 +233,9 @@ macro_rules! spi_device {
                 self,
                 mosi: MOSI,
             ) -> $typename<mode::Device, SCLK, pins::mode::Assigned<MOSI>, MISO, SSEL> {
+                Self::select_mosi(MOSI::NUMBER);
                 unused(mosi);
-                panic!("not implemented");
+                $typename::new()
             }
         }
 
@@ -217,8 +246,9 @@ macro_rules! spi_device {
                 self,
                 miso: MISO,
             ) -> $typename<mode::Device, SCLK, MOSI, pins::mode::Assigned<MISO>, SSEL> {
+                Self::select_miso(MISO::NUMBER);
                 unused(miso);
-                panic!("not implemented");
+                $typename::new()
             }
         }
 
@@ -229,8 +259,9 @@ macro_rules! spi_device {
                 self,
                 ssel: SSEL,
             ) -> $typename<mode::Device, SCLK, MOSI, MISO, pins::mode::Assigned<SSEL>> {
+                Self::select_ssel(SSEL::NUMBER);
                 unused(ssel);
-                panic!("not implemented");
+                $typename::new()
             }
         }
 
@@ -273,7 +304,8 @@ macro_rules! spi_device {
                 $typename<MODE, SCLK, pins::mode::Unassigned, MISO, SSEL>,
                 MOSI,
             ) {
-                panic!("not implemented");
+                Self::select_mosi(pins::PINASSIGN_NOTHING);
+                ($typename::new(), pin_type_as_is())
             }
         }
 
@@ -291,7 +323,8 @@ macro_rules! spi_device {
                 $typename<MODE, SCLK, MOSI, pins::mode::Unassigned, SSEL>,
                 MISO,
             ) {
-                panic!("not implemented");
+                Self::select_miso(pins::PINASSIGN_NOTHING);
+                ($typename::new(), pin_type_as_is())
             }
         }
 
@@ -309,7 +342,8 @@ macro_rules! spi_device {
                 $typename<MODE, SCLK, MOSI, MISO, pins::mode::Unassigned>,
                 SSEL,
             ) {
-                panic!("not implemented");
+                Self::select_ssel(pins::PINASSIGN_NOTHING);
+                ($typename::new(), pin_type_as_is())
             }
         }
 
@@ -343,19 +377,31 @@ macro_rules! spi_device {
     };
 }
 
-spi_device!(SPI0, { SCLK: (pinassign3, spi0_sck_io) });
-spi_device!(SPI1, { SCLK: (pinassign4, spi1_sck_io) });
+spi_device!(SPI0, {
+    SCLK: (pinassign3, spi0_sck_io),
+    MOSI: (pinassign4, spi0_mosi_io),
+    MISO: (pinassign4, spi0_miso_io),
+    SSEL: (pinassign4, spi0_ssel_io)
+});
+spi_device!(SPI1, {
+    SCLK: (pinassign4, spi1_sck_io),
+    MOSI: (pinassign5, spi1_mosi_io),
+    MISO: (pinassign5, spi1_miso_io),
+    SSEL: (pinassign5, spi1_ssel_io)
+});
 
 // Represents SPI modes.
 //
 // Can be safely implemented only by types in this crate.
 pub unsafe trait Mode {}
 
+#[inline(always)]
 fn unused<T>(_v: T) {}
 
 // Helper function for creating "instances" of our zero-length pin types
 // without needing to state their names, when we're releasing/deactivating
 // pins.
+#[inline(always)]
 fn pin_type_as_is<T: pins::Pin>() -> T {
     // This is safe because our pin types are zero-length anyway, and so
     // "filling them with zeroes" is indistinguishable from properly
