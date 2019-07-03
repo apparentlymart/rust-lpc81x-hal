@@ -23,12 +23,12 @@ pub unsafe trait Pin {
 // an output function.
 //
 // Only types in the `lpx81x-hal` crate may implement this trait.
-pub unsafe trait UnassignedPin {}
+pub unsafe trait UnassignedPin: Pin {}
 
 // Trait implemented by types representing the input parts of pins.
 //
 // Only types in the `lpx81x-hal` crate may implement this trait.
-pub unsafe trait InputPin {}
+pub unsafe trait InputPin: Pin {}
 
 // Trait implemented by types representing pin modes.
 //

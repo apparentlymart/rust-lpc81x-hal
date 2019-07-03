@@ -64,7 +64,7 @@ macro_rules! spi_device {
         {
             /// Consumes the inactive SPI bus and returns it with host mode enabled,
             /// using the given pin for SCLK.
-            pub fn activate_as_host<SCLK: pins::Pin + pins::UnassignedPin>(
+            pub fn activate_as_host<SCLK: pins::UnassignedPin>(
                 self,
                 sclk: SCLK,
             ) -> $typename<
@@ -81,7 +81,7 @@ macro_rules! spi_device {
 
             /// Consumes the inactive SPI bus and returns it with device mode enabled,
             /// using the given pin for SCLK.
-            pub fn activate_as_device<SCLK: pins::Pin + pins::InputPin>(
+            pub fn activate_as_device<SCLK: pins::InputPin>(
                 self,
                 sclk: SCLK,
             ) -> $typename<
@@ -104,10 +104,7 @@ macro_rules! spi_device {
         impl<SCLK: pins::PinAssignment, SSEL: pins::PinAssignment>
             $typename<mode::Host, SCLK, pins::mode::Unassigned, pins::mode::Unassigned, SSEL>
         {
-            pub fn with_data_pins<
-                MOSI: pins::Pin + pins::UnassignedPin,
-                MISO: pins::Pin + pins::InputPin,
-            >(
+            pub fn with_data_pins<MOSI: pins::UnassignedPin, MISO: pins::InputPin>(
                 self,
                 mosi: MOSI,
                 miso: MISO,
@@ -125,7 +122,7 @@ macro_rules! spi_device {
         impl<SCLK: pins::PinAssignment, MISO: pins::PinAssignment, SSEL: pins::PinAssignment>
             $typename<mode::Host, SCLK, pins::mode::Unassigned, MISO, SSEL>
         {
-            pub fn with_mosi<MOSI: pins::Pin + pins::UnassignedPin>(
+            pub fn with_mosi<MOSI: pins::UnassignedPin>(
                 self,
                 mosi: MOSI,
             ) -> $typename<mode::Host, SCLK, pins::mode::Assigned<MOSI>, MISO, SSEL> {
@@ -137,7 +134,7 @@ macro_rules! spi_device {
         impl<SCLK: pins::PinAssignment, MOSI: pins::PinAssignment, SSEL: pins::PinAssignment>
             $typename<mode::Host, SCLK, MOSI, pins::mode::Unassigned, SSEL>
         {
-            pub fn with_miso<MISO: pins::Pin + pins::InputPin>(
+            pub fn with_miso<MISO: pins::InputPin>(
                 self,
                 miso: MISO,
             ) -> $typename<mode::Host, SCLK, MOSI, pins::mode::Assigned<MISO>, SSEL> {
@@ -149,7 +146,7 @@ macro_rules! spi_device {
         impl<SCLK: pins::PinAssignment, MOSI: pins::PinAssignment, MISO: pins::PinAssignment>
             $typename<mode::Host, SCLK, MOSI, MISO, pins::mode::Unassigned>
         {
-            pub fn with_ssel<SSEL: pins::Pin + pins::UnassignedPin>(
+            pub fn with_ssel<SSEL: pins::UnassignedPin>(
                 self,
                 ssel: SSEL,
             ) -> $typename<mode::Host, SCLK, MOSI, MISO, pins::mode::Assigned<SSEL>> {
@@ -186,10 +183,7 @@ macro_rules! spi_device {
         impl<SCLK: pins::PinAssignment, SSEL: pins::PinAssignment>
             $typename<mode::Device, SCLK, pins::mode::Unassigned, pins::mode::Unassigned, SSEL>
         {
-            pub fn with_data_pins<
-                MOSI: pins::Pin + pins::InputPin,
-                MISO: pins::Pin + pins::UnassignedPin,
-            >(
+            pub fn with_data_pins<MOSI: pins::InputPin, MISO: pins::UnassignedPin>(
                 self,
                 mosi: MOSI,
                 miso: MISO,
@@ -207,7 +201,7 @@ macro_rules! spi_device {
         impl<SCLK: pins::PinAssignment, MISO: pins::PinAssignment, SSEL: pins::PinAssignment>
             $typename<mode::Device, SCLK, pins::mode::Unassigned, MISO, SSEL>
         {
-            pub fn with_mosi<MOSI: pins::Pin + pins::InputPin>(
+            pub fn with_mosi<MOSI: pins::InputPin>(
                 self,
                 mosi: MOSI,
             ) -> $typename<mode::Device, SCLK, pins::mode::Assigned<MOSI>, MISO, SSEL> {
@@ -219,7 +213,7 @@ macro_rules! spi_device {
         impl<SCLK: pins::PinAssignment, MOSI: pins::PinAssignment, SSEL: pins::PinAssignment>
             $typename<mode::Device, SCLK, MOSI, pins::mode::Unassigned, SSEL>
         {
-            pub fn with_miso<MISO: pins::Pin + pins::UnassignedPin>(
+            pub fn with_miso<MISO: pins::UnassignedPin>(
                 self,
                 miso: MISO,
             ) -> $typename<mode::Device, SCLK, MOSI, pins::mode::Assigned<MISO>, SSEL> {
@@ -231,7 +225,7 @@ macro_rules! spi_device {
         impl<SCLK: pins::PinAssignment, MOSI: pins::PinAssignment, MISO: pins::PinAssignment>
             $typename<mode::Device, SCLK, MOSI, MISO, pins::mode::Unassigned>
         {
-            pub fn with_ssel<SSEL: pins::Pin + pins::InputPin>(
+            pub fn with_ssel<SSEL: pins::InputPin>(
                 self,
                 ssel: SSEL,
             ) -> $typename<mode::Device, SCLK, MOSI, MISO, pins::mode::Assigned<SSEL>> {
