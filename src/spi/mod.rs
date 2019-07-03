@@ -4,6 +4,7 @@ use crate::pins;
 use core::marker::PhantomData;
 
 pub mod mode;
+pub mod word;
 
 pub struct SPI0<MODE, SCLK, MOSI, MISO, SSEL>
 where
@@ -138,6 +139,28 @@ impl<SCLK: pins::PinAssignment, MOSI: pins::PinAssignment, MISO: pins::PinAssign
         ssel: SSEL,
     ) -> SPI0<mode::Host, SCLK, MOSI, MISO, pins::mode::Assigned<SSEL>> {
         unused(ssel);
+        panic!("not implemented");
+    }
+}
+
+
+impl<W, SCLK, MOSI, MISO, SSEL> embedded_hal::spi::FullDuplex<W> for
+    SPI0<mode::Host, SCLK, MOSI, MISO, SSEL>
+where
+    W: word::Word,
+    SCLK: pins::PinAssignment,
+    MOSI: pins::PinAssignment,
+    MISO: pins::PinAssignment,
+    SSEL: pins::PinAssignment,
+{
+    type Error = !;
+
+    fn read(&mut self) -> Result<W, nb::Error<!>> {
+        panic!("not implemented");
+    }
+
+    fn send(&mut self, word: W) -> Result<(), nb::Error<!>> {
+        unused(word);
         panic!("not implemented");
     }
 }
