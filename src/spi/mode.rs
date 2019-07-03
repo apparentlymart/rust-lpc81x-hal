@@ -7,6 +7,6 @@ unsafe impl super::Mode for Host {}
 pub enum Device {}
 unsafe impl super::Mode for Device {}
 
-pub unsafe trait Active {}
+pub unsafe trait Active: super::Mode {}
 unsafe impl Active for Host {}
 unsafe impl Active for Device {}
