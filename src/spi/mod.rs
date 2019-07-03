@@ -85,7 +85,7 @@ macro_rules! spi_device {
                 self,
                 sclk: SCLK,
             ) -> $typename<
-                mode::Host,
+                mode::Device,
                 pins::mode::Assigned<SCLK>,
                 pins::mode::Unassigned,
                 pins::mode::Unassigned,
