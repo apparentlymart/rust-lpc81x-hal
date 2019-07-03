@@ -71,11 +71,13 @@ macro_rules! pin {
             type Error = !;
 
             fn is_high(&self) -> Result<bool, !> {
-                panic!("unimplemented");
+                let gpio = lpc81x_pac::GPIO_PORT::ptr();
+                Ok(unsafe { (*gpio).b[Self::NUMBER as usize].read().bits() != 0 })
             }
 
             fn is_low(&self) -> Result<bool, !> {
-                panic!("unimplemented");
+                let gpio = lpc81x_pac::GPIO_PORT::ptr();
+                Ok(unsafe { (*gpio).b[Self::NUMBER as usize].read().bits() == 0 })
             }
         }
 
