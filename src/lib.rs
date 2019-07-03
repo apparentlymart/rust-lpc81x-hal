@@ -29,6 +29,18 @@ pub struct Peripherals {
         pins::mode::Unassigned,
         pins::mode::Unassigned,
     >,
+
+    /// The second SPI device, initially inactive.
+    ///
+    /// This device is only present in models LPC812M101JDH16 and
+    /// LPC812M101JDH20 (TSSOP packages).
+    pub spi1: spi::SPI1<
+        spi::mode::Inactive,
+        pins::mode::Unassigned,
+        pins::mode::Unassigned,
+        pins::mode::Unassigned,
+        pins::mode::Unassigned,
+    >,
 }
 
 impl Peripherals {
@@ -37,6 +49,7 @@ impl Peripherals {
             pins: pins::Pins::new(),
             pin_inputs: pins::PinInputs::new(),
             spi0: spi::SPI0::new(),
+            spi1: spi::SPI1::new(),
         }
     }
 
