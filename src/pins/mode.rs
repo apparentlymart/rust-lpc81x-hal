@@ -9,6 +9,7 @@ macro_rules! mode {
 mode!(Unassigned);
 mode!(DigitalOutput);
 mode!(DigitalInput);
+mode!(SWM);
 
 unsafe impl super::PinAssignment for Unassigned {}
 

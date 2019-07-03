@@ -1,11 +1,13 @@
 #![no_std]
 #![feature(never_type)]
+#![feature(optin_builtin_traits)]
 
 pub extern crate lpc81x_pac as lpc81x;
 pub use lpc81x::Interrupt;
 pub use lpc81x::NVIC_PRIO_BITS;
 
 pub mod pins;
+pub mod spi;
 
 /// Singleton container for the peripherals modeled by this HAL crate.
 pub struct Peripherals {
@@ -18,6 +20,15 @@ pub struct Peripherals {
     /// parts, and crucially allows access to the input parts even when
     /// ownership of the members of `pins` have been transferred elsewhere.
     pub pin_inputs: pins::PinInputs,
+
+    /// The first SPI device, initially inactive.
+    pub spi0: spi::SPI0<
+        spi::mode::Inactive,
+        pins::mode::Unassigned,
+        pins::mode::Unassigned,
+        pins::mode::Unassigned,
+        pins::mode::Unassigned,
+    >,
 }
 
 impl Peripherals {
@@ -25,6 +36,7 @@ impl Peripherals {
         Self {
             pins: pins::Pins::new(),
             pin_inputs: pins::PinInputs::new(),
+            spi0: spi::SPI0::new(),
         }
     }
 

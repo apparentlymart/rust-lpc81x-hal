@@ -66,6 +66,8 @@ macro_rules! pin {
         }
 
         unsafe impl super::UnassignedPin for $name<mode::Unassigned> {}
+        unsafe impl super::InputPin for $name<mode::DigitalInput> {}
+        unsafe impl super::InputPin for $name<mode::Unassigned> {}
 
         impl embedded_hal::digital::v2::InputPin for $name<mode::DigitalInput> {
             type Error = !;
