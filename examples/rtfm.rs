@@ -4,7 +4,7 @@
 #![no_main]
 
 extern crate cortex_m_rt;
-//extern crate panic_halt;
+extern crate panic_halt;
 
 use lpc81x_hal as hal;
 
