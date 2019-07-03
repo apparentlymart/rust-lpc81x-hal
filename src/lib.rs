@@ -77,6 +77,22 @@ impl Peripherals {
         Self::new()
     }
 
+    /// Returns a value representing the specific LPC8xx model of the current
+    /// device, allowing dynamic inspection of some details that vary by model.
+    pub fn model(&self) -> Model {
+        let syscon = lpc81x_pac::SYSCON::ptr();
+        let raw = unsafe { (*syscon).device_id.read().deviceid().bits() };
+        match raw {
+            0x00008100 => Model::LPC810M021FN8,
+            0x00008110 => Model::LPC811M001JDH16,
+            0x00008120 => Model::LPC812M101JDH16,
+            0x00008121 => Model::LPC812M101JD20,
+            0x00008122 => Model::LPC812M101JDH20,
+            0x00008123 => Model::LPC812M101JTB16,
+            _ => panic!("unsupported model"),
+        }
+    }
+
     /// Consumes the HAL-level peripherals to unwrap the PAC-level
     /// peripherhals.
     pub fn release_pac(self) -> lpc81x::Peripherals {
@@ -92,3 +108,33 @@ impl Peripherals {
         Self::pac()
     }
 }
+
+pub enum Model {
+    LPC810M021FN8,
+    LPC811M001JDH16,
+    LPC812M101JDH16,
+    LPC812M101JD20,
+    LPC812M101JDH20,
+    LPC812M101JTB16,
+}
+
+impl Model {
+    pub fn has_pin<P: pins::Pin>(&self, pin: P) -> bool {
+        unused(pin);
+        match self {
+            Model::LPC810M021FN8 => P::NUMBER <= 5,
+            _ => true,
+        }
+    }
+
+    pub fn has_spi1(&self) -> bool {
+        match self {
+            Model::LPC812M101JDH16 => true,
+            Model::LPC812M101JDH20 => true,
+            _ => false,
+        }
+    }
+}
+
+#[inline(always)]
+fn unused<T>(_v: T) {}
