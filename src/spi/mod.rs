@@ -16,6 +16,20 @@ macro_rules! spi_device {
         MISO: ($misoassign:ident, $misofield:ident),
         SSEL: ($sselassign:ident, $sselfield:ident)
     }) => {
+        /// Represents the SPI peripheral.
+        ///
+        /// Each SPI peripheral starts in an inactive state, not connected to
+        /// any pins. To use it, call either `activate_as_host` or
+        /// `activate_as_device` to activate the peripheral and assign it
+        /// an external pin for the SCLK signal.
+        ///
+        /// Once activated, call either `with_data_pins`, `with_mosi`, or
+        /// `with_miso` to assign further external pins for the MOSI and MISO
+        /// signals, as required.
+        ///
+        /// An activated SPI peripheral in host mode implements the
+        /// `embedded-hal` SPI traits, so you can pass it directly to a device
+        /// driver that expects any of these traits.
         pub struct $typename<MODE, SCLK, MOSI, MISO, SSEL>
         where
             MODE: Mode,
@@ -153,6 +167,9 @@ macro_rules! spi_device {
             }
         }
 
+        /// An SPI peripheral object represents access to a single system
+        /// peripheral, so it's not safe to share it across multiple threads
+        /// without some external concurrency control mechanisms.
         impl<MODE, SCLK, MOSI, MISO, SSEL> !Sync for $typename<MODE, SCLK, MOSI, MISO, SSEL> {}
 
         /* ******************************
@@ -224,6 +241,14 @@ macro_rules! spi_device {
         {
             type Error = !;
 
+            /// Sends a word (from 1 to 16 bits) over the SPI interface.
+            ///
+            /// The `embedded-hal` contract calls for chip select to be managed
+            /// separately by calling code, so `send` does not automatically
+            /// assert and unassert the SSEL signal to delimit the transaction.
+            /// When using this trait implementation, implement chip select as
+            /// a generic digital output pin instead, because that is what
+            /// embedded-hal device drivers expect.
             fn send(&mut self, word: W) -> Result<(), nb::Error<!>> {
                 let periph = lpc81x_pac::$typename::ptr();
                 let stat = unsafe { (*periph).stat.read() };
@@ -241,6 +266,10 @@ macro_rules! spi_device {
                 Ok(())
             }
 
+            /// Reads the word returned from the device after a `send`.
+            ///
+            /// Calling `read` once for every `send` is mandatory in order to
+            /// leave the SPI bus in a correct state for subsequent transfers.
             fn read(&mut self) -> Result<W, nb::Error<!>> {
                 let periph = lpc81x_pac::$typename::ptr();
                 let stat = unsafe { (*periph).stat.read() };
@@ -285,6 +314,36 @@ macro_rules! spi_device {
         {
         }
 
+        impl<
+                SCLK: pins::PinAssignment,
+                MOSI: pins::PinAssignment,
+                MISO: pins::PinAssignment,
+                SSEL: pins::PinAssignment,
+            > $typename<mode::Host, SCLK, MOSI, MISO, SSEL>
+        {
+            // Configures the clock divider for the SPI peripheral.
+            //
+            // The frequency of the SPI clock is the frequency of the system
+            // clock divided by the given divisor. The SPI peripheral accepts
+            // divisors between 1 and 65536. If the given divisor is not within
+            // that range then it will be capped to the closest limit to
+            // keep it in range.
+            pub fn set_clock_divider(&mut self, div: u32) {
+                let mut real_div = div;
+                if div < 1 {
+                    real_div = 1;
+                } else if div > 65536 {
+                    real_div = 65536;
+                }
+                let periph = lpc81x_pac::$typename::ptr();
+                unsafe {
+                    (*periph)
+                        .div
+                        .write(|w| w.divval().bits((real_div - 1) as u16))
+                }
+            }
+        }
+
         /* ******************************
             METHODS FOR DEVICE MODE
         ****************************** */
@@ -296,6 +355,9 @@ macro_rules! spi_device {
         impl<MODE: mode::Active, SCLK: pins::PinAssignment, SSEL: pins::PinAssignment>
             $typename<MODE, SCLK, pins::mode::Unassigned, pins::mode::Unassigned, SSEL>
         {
+            /// Assigns pins to both the MOSI and MISO signals at once.
+            ///
+            /// This is just a convenience shortcut for `.with_mosi(mosi).with_miso(miso)`.
             pub fn with_data_pins<MOSI: pins::UnassignedPin, MISO: pins::UnassignedPin>(
                 self,
                 mosi: MOSI,
@@ -313,6 +375,7 @@ macro_rules! spi_device {
                 SSEL: pins::PinAssignment,
             > $typename<MODE, SCLK, pins::mode::Unassigned, MISO, SSEL>
         {
+            /// Assigns an unassigned external pin to the MOSI signal.
             pub fn with_mosi<MOSI: pins::UnassignedPin>(
                 self,
                 mosi: MOSI,
@@ -330,6 +393,7 @@ macro_rules! spi_device {
                 SSEL: pins::PinAssignment,
             > $typename<MODE, SCLK, MOSI, pins::mode::Unassigned, SSEL>
         {
+            /// Assigns an unassigned external pin to the MISO signal.
             pub fn with_miso<MISO: pins::UnassignedPin>(
                 self,
                 miso: MISO,
@@ -347,6 +411,7 @@ macro_rules! spi_device {
                 MISO: pins::PinAssignment,
             > $typename<MODE, SCLK, MOSI, MISO, pins::mode::Unassigned>
         {
+            /// Assigns an unassigned external pin to the SSEL signal.
             pub fn with_ssel<SSEL: pins::UnassignedPin>(
                 self,
                 ssel: SSEL,
@@ -361,25 +426,17 @@ macro_rules! spi_device {
         impl<
                 MODE: mode::Active,
                 SCLK: pins::PinAssignment,
-                MOSI: pins::PinAssignment,
-                MISO: pins::PinAssignment,
-                SSEL: pins::PinAssignment,
-            > $typename<MODE, SCLK, MOSI, MISO, SSEL>
-        {
-            pub fn set_clock_divider(&mut self, div: u32) {
-                let periph = lpc81x_pac::$typename::ptr();
-                unsafe { (*periph).div.write(|w| w.divval().bits((div - 1) as u16)) }
-            }
-        }
-
-        impl<
-                MODE: mode::Active,
-                SCLK: pins::PinAssignment,
                 MOSI: pins::Pin,
                 MISO: pins::Pin,
                 SSEL: pins::PinAssignment,
             > $typename<MODE, SCLK, pins::mode::Assigned<MOSI>, pins::mode::Assigned<MISO>, SSEL>
         {
+            /// Consumes the SPI object and returns a new object with the MOSI
+            /// and MISO pins detached.
+            ///
+            /// Along with that new object, the former MOSI and MISO pins are
+            /// also returned in unassigned mode, ready to be assigned to
+            /// another function.
             pub fn release_data_pins(
                 self,
             ) -> (
@@ -401,6 +458,12 @@ macro_rules! spi_device {
                 SSEL: pins::PinAssignment,
             > $typename<MODE, SCLK, pins::mode::Assigned<MOSI>, MISO, SSEL>
         {
+            /// Consumes the SPI object and returns a new object with the MOSI
+            /// pin detached.
+            ///
+            /// Along with that new object, the former MOSI pin is also
+            /// returned in unassigned mode, ready to be assigned to another
+            /// function.
             pub fn release_mosi(
                 self,
             ) -> (
@@ -420,6 +483,12 @@ macro_rules! spi_device {
                 SSEL: pins::PinAssignment,
             > $typename<MODE, SCLK, MOSI, pins::mode::Assigned<MISO>, SSEL>
         {
+            /// Consumes the SPI object and returns a new object with the MISO
+            /// pin detached.
+            ///
+            /// Along with that new object, the former MISO pin is also
+            /// returned in unassigned mode, ready to be assigned to another
+            /// function.
             pub fn release_miso(
                 self,
             ) -> (
@@ -439,6 +508,12 @@ macro_rules! spi_device {
                 SSEL: pins::Pin,
             > $typename<MODE, SCLK, MOSI, MISO, pins::mode::Assigned<SSEL>>
         {
+            /// Consumes the SPI object and returns a new object with the SSEL
+            /// pin detached.
+            ///
+            /// Along with that new object, the former SSEL pin is also
+            /// returned in unassigned mode, ready to be assigned to another
+            /// function.
             pub fn release_ssel(
                 self,
             ) -> (
@@ -461,6 +536,15 @@ macro_rules! spi_device {
         {
             /// Consumes the active SPI bus and returns it deactivated, along with
             /// the now-unused pin that was used for SCK.
+            ///
+            /// This method can be called only when any assigned MOSI, MISO,
+            /// and SSEL pins have already been released. For example:
+            ///
+            /// ```rust
+            /// let (spi, mosi, miso) = spi.release_data_pins();
+            /// // (for this example, assume the object never had SSEL active)
+            /// let (spi, sclk) = spi.deactivate();
+            /// ```
             pub fn deactivate(
                 self,
             ) -> (

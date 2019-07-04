@@ -234,7 +234,7 @@ pub struct PinInputs {
 
     /// GPIO pin 5. External reset by default.
     ///
-    /// This pin can optionally be configured as an external reset signal, in
+    /// This pin is initially configured as an external reset signal, in
     /// which case driving the pin low will cause a system reset regardless
     /// of what other functions might simultaneously be assigned to the pin.
     /// This reset behavior is activated by default at boot, but can be

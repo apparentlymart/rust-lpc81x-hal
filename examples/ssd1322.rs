@@ -22,7 +22,7 @@ fn main() -> ! {
     // - D/C on pin 15
     // - Display ~RESET on pin 16
 
-    let p = unsafe { hal::Peripherals::steal() };
+    let p = hal::Peripherals::take().unwrap();
 
     let pins = p.pins;
 
@@ -44,8 +44,8 @@ fn main() -> ! {
     // anything else.
     {
         use embedded_hal::digital::v2::OutputPin;
-        rst.set_low().unwrap_or_default();
-        rst.set_high().unwrap_or_default();
+        rst.set_low().unwrap();
+        rst.set_high().unwrap();
     }
 
     // Send data over SPI at our maximum rate (divide clock by 1).
@@ -54,7 +54,7 @@ fn main() -> ! {
     spi.set_clock_divider(1);
 
     let mut driver = SSD1322::new(spi, cs, dc);
-    init(&mut driver).unwrap_or_default();
+    init(&mut driver).unwrap();
 
     // We'll allocate a buffer to render our checkerboard pattern into, and then
     // stream it over to the display. We don't have enough memory to buffer
@@ -70,7 +70,8 @@ fn main() -> ! {
             buf[(y * WIDTH / 2 + x)] = if y % 2 == 0 { 0xf0 } else { 0x0f };
         }
     }
-    driver.cmd_n(0x5c, &mut buf[..]).unwrap_or_default();
+    driver.cmd_2(0x15, 0x1C, 0x1C + (WIDTH / 8) as u8).unwrap(); // Set column addresses to constrain to our desired with
+    driver.cmd_n(0x5c, &mut buf[..]).unwrap();
 
     loop {
         cortex_m::asm::wfi();
