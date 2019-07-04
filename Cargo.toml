@@ -1,8 +1,11 @@
 [package]
 name = "lpc81x-hal"
+description = "High-level API and HAL implementations for LPC81x microcontrollers."
 version = "0.1.0"
 authors = ["Martin Atkins <mart@degeneration.co.uk>"]
 edition = "2018"
+license = "MIT"
+repository = "https://github.com/apparentlymart/rust-lpc81x-hal"
 
 [lib]
 test = false
