@@ -214,13 +214,31 @@ macro_rules! spi_device {
         {
             type Error = !;
 
-            fn read(&mut self) -> Result<W, nb::Error<!>> {
-                panic!("not implemented");
+            fn send(&mut self, word: W) -> Result<(), nb::Error<!>> {
+                let periph = lpc81x_pac::$typename::ptr();
+                let stat = unsafe { (*periph).stat.read() };
+                if stat.txrdy().bit_is_clear() {
+                    return Err(nb::Error::WouldBlock);
+                }
+                unsafe {
+                    (*periph).txdatctl.write(|w| {
+                        w.txdat()
+                            .bits(word.value_to_transmit() & W::MASK)
+                            .flen()
+                            .bits(W::LEN)
+                    });
+                };
+                Ok(())
             }
 
-            fn send(&mut self, word: W) -> Result<(), nb::Error<!>> {
-                unused(word);
-                panic!("not implemented");
+            fn read(&mut self) -> Result<W, nb::Error<!>> {
+                let periph = lpc81x_pac::$typename::ptr();
+                let stat = unsafe { (*periph).stat.read() };
+                if stat.rxrdy().bit_is_clear() {
+                    return Err(nb::Error::WouldBlock);
+                }
+                let raw = unsafe { (*periph).rxdat.read().rxdat().bits() };
+                Ok(W::from_received(raw & W::MASK))
             }
         }
 
