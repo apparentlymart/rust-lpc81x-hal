@@ -89,10 +89,13 @@ macro_rules! spi_device {
                 let syscon = lpc81x_pac::SYSCON::ptr();
                 let periph = lpc81x_pac::$typename::ptr();
                 unsafe {
-                    // Take the device out of reset first
-                    (*syscon)
-                        .presetctrl
-                        .modify(|_, w| w.$resetctrlfield().bit(enabled));
+                    if enabled {
+                        // Take the device out of reset first
+                        (*syscon)
+                            .presetctrl
+                            .modify(|_, w| w.$resetctrlfield().bit(true));
+                        cortex_m::asm::dsb();
+                    }
                     (*periph).cfg.modify(|_, w| {
                         w.enable()
                             .bit(enabled)
@@ -124,7 +127,13 @@ macro_rules! spi_device {
                                     false
                                 },
                             )
-                    })
+                    });
+                    if !enabled {
+                        cortex_m::asm::dsb();
+                        (*syscon)
+                            .presetctrl
+                            .modify(|_, w| w.$resetctrlfield().bit(false));
+                    }
                 }
             }
 
@@ -138,8 +147,9 @@ macro_rules! spi_device {
                         } else {
                             w.$clkctrlfield().disable()
                         }
-                    })
+                    });
                 }
+                cortex_m::asm::dsb();
             }
         }
 
@@ -225,7 +235,7 @@ macro_rules! spi_device {
                         w.txdat()
                             .bits(word.value_to_transmit() & W::MASK)
                             .flen()
-                            .bits(W::LEN)
+                            .bits(W::LEN - 1)
                     });
                 };
                 Ok(())
@@ -240,6 +250,39 @@ macro_rules! spi_device {
                 let raw = unsafe { (*periph).rxdat.read().rxdat().bits() };
                 Ok(W::from_received(raw & W::MASK))
             }
+        }
+
+        impl<W, SCLK, MOSI, MISO, SSEL> embedded_hal::blocking::spi::write::Default<W>
+            for $typename<mode::Host, SCLK, MOSI, MISO, SSEL>
+        where
+            W: word::Word,
+            SCLK: pins::PinAssignment,
+            MOSI: pins::PinAssignment,
+            MISO: pins::PinAssignment,
+            SSEL: pins::PinAssignment,
+        {
+        }
+
+        impl<W, SCLK, MOSI, MISO, SSEL> embedded_hal::blocking::spi::write_iter::Default<W>
+            for $typename<mode::Host, SCLK, MOSI, MISO, SSEL>
+        where
+            W: word::Word,
+            SCLK: pins::PinAssignment,
+            MOSI: pins::PinAssignment,
+            MISO: pins::PinAssignment,
+            SSEL: pins::PinAssignment,
+        {
+        }
+
+        impl<W, SCLK, MOSI, MISO, SSEL> embedded_hal::blocking::spi::transfer::Default<W>
+            for $typename<mode::Host, SCLK, MOSI, MISO, SSEL>
+        where
+            W: word::Word,
+            SCLK: pins::PinAssignment,
+            MOSI: pins::PinAssignment,
+            MISO: pins::PinAssignment,
+            SSEL: pins::PinAssignment,
+        {
         }
 
         /* ******************************
@@ -312,6 +355,20 @@ macro_rules! spi_device {
                 Self::select_ssel(SSEL::NUMBER, polarity);
                 unused(ssel);
                 $typename::new()
+            }
+        }
+
+        impl<
+                MODE: mode::Active,
+                SCLK: pins::PinAssignment,
+                MOSI: pins::PinAssignment,
+                MISO: pins::PinAssignment,
+                SSEL: pins::PinAssignment,
+            > $typename<MODE, SCLK, MOSI, MISO, SSEL>
+        {
+            pub fn set_clock_divider(&mut self, div: u32) {
+                let periph = lpc81x_pac::$typename::ptr();
+                unsafe { (*periph).div.write(|w| w.divval().bits((div - 1) as u16)) }
             }
         }
 
