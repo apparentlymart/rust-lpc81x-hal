@@ -129,6 +129,9 @@ pub struct Peripherals {
     pub i2c: i2c::I2C<
         pins::mode::Unassigned,
         pins::mode::Unassigned,
+        i2c::mode::Host<i2c::mode::Inactive>,
+        i2c::mode::Device<i2c::mode::Inactive>,
+        i2c::mode::Monitor<i2c::mode::Inactive>,
     >,
 }
 

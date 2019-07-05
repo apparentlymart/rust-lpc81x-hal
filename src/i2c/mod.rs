@@ -3,30 +3,51 @@
 use crate::pins;
 use core::marker::PhantomData;
 
+pub mod mode;
+
 /// Represents the I2C peripheral.
 ///
 /// The I2C peripheral starts in an inactive state, not connected to
 /// any pins. To use it, call `activate` to activate the peripheral and assign
 /// it external pins for the SCL and SDA signals.
-pub struct I2C<SCL, SDA>
+///
+/// The I2C peripheral has three modes that can each be independently activated:
+///
+/// * Host mode: initiates communication with devices on the bus; enable with `enable_host_mode`.
+/// * Device mode: responds to communication requests from hosts on the bus; enable with `enable_device_mdoe`.
+/// * Monitor mode: monitors communications on the bus without transmitting anything; enable with `enable_monitor_mode`.
+///
+/// With no modes activated, the I2C peripheral is powered but cannot transmit
+/// or recieve any data.
+pub struct I2C<SCL, SDA, HS, DS, MS>
 where
     SCL: pins::PinAssignment,
     SDA: pins::PinAssignment,
+    HS: mode::HostStatus,
+    DS: mode::DeviceStatus,
+    MS: mode::MonitorStatus,
 {
     scl: PhantomData<SCL>,
     sda: PhantomData<SDA>,
+    modes: PhantomData<(HS, DS, MS)>,
 }
 
-impl<SCL, SDA> I2C<SCL, SDA>
+impl<SCL, SDA, HS, DS, MS> !Sync for I2C<SCL, SDA, HS, DS, MS> {}
+
+impl<SCL, SDA, HS, DS, MS> I2C<SCL, SDA, HS, DS, MS>
 where
     SCL: pins::PinAssignment,
     SDA: pins::PinAssignment,
+    HS: mode::HostStatus,
+    DS: mode::DeviceStatus,
+    MS: mode::MonitorStatus,
 {
     #[inline(always)]
     pub(crate) fn new() -> Self {
         Self {
             scl: PhantomData,
             sda: PhantomData,
+            modes: PhantomData,
         }
     }
 
@@ -51,17 +72,6 @@ where
                 .presetctrl
                 .modify(|_, w| w.i2c_rst_n().bit(enabled));
             cortex_m::asm::dsb();
-            /*(*periph).cfg.modify(|_, w| {
-                if enabled {
-                    if host {
-                        w.msten().bit(enabled)
-                    } else {
-                        w.slven().bit(enabled)
-                    }
-                } else {
-                    w.msten().bit(false).slven().bit(false)
-                }
-            });*/
         }
     }
 
@@ -81,7 +91,15 @@ where
     }
 }
 
-impl I2C<pins::mode::Unassigned, pins::mode::Unassigned> {
+impl
+    I2C<
+        pins::mode::Unassigned,
+        pins::mode::Unassigned,
+        mode::HostInactive,
+        mode::DeviceInactive,
+        mode::MonitorInactive,
+    >
+{
     /// Consumes the inactive I2C bus and returns it with host mode enabled,
     /// using the given pins for SCL and SDA.
     ///
@@ -92,7 +110,13 @@ impl I2C<pins::mode::Unassigned, pins::mode::Unassigned> {
         self,
         scl: SCL,
         sda: SDA,
-    ) -> I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>> {
+    ) -> I2C<
+        pins::mode::Assigned<SCL>,
+        pins::mode::Assigned<SDA>,
+        mode::HostInactive,
+        mode::DeviceInactive,
+        mode::MonitorInactive,
+    > {
         Self::set_i2c_clock(true);
         Self::set_enabled(true);
         Self::select_scl(SCL::NUMBER);
@@ -103,16 +127,168 @@ impl I2C<pins::mode::Unassigned, pins::mode::Unassigned> {
     }
 }
 
-impl<SCL: pins::Pin, SDA: pins::Pin> I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>> {
+impl<SCL, SDA, DS, MS>
+    I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>, mode::HostInactive, DS, MS>
+where
+    SCL: pins::Pin,
+    SDA: pins::Pin,
+    DS: mode::DeviceStatus,
+    MS: mode::MonitorStatus,
+{
+    /// Consumes the active I2C bus and returns it with host mode activated,
+    /// and thus with [the host-mode-only methods](#host-mode-methods) available.
+    pub fn enable_host_mode(
+        &self,
+    ) -> I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>, mode::HostActive, DS, MS> {
+        let periph = lpc81x_pac::I2C::ptr();
+        unsafe {
+            (*periph).cfg.modify(|_, w| w.msten().bit(true));
+        }
+        I2C::new()
+    }
+}
+
+impl<SCL, SDA, HS, MS>
+    I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>, HS, mode::DeviceInactive, MS>
+where
+    SCL: pins::Pin,
+    SDA: pins::Pin,
+    HS: mode::HostStatus,
+    MS: mode::MonitorStatus,
+{
+    /// Consumes the active I2C bus and returns it with device mode activated,
+    /// and thus with [the device-mode-only methods](#device-mode-methods) available.
+    pub fn enable_device_mode(
+        &self,
+    ) -> I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>, HS, mode::DeviceActive, MS> {
+        let periph = lpc81x_pac::I2C::ptr();
+        unsafe {
+            (*periph).cfg.modify(|_, w| w.slven().bit(true));
+        }
+        I2C::new()
+    }
+}
+
+impl<SCL, SDA, HS, DS>
+    I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>, HS, DS, mode::MonitorInactive>
+where
+    SCL: pins::Pin,
+    SDA: pins::Pin,
+    HS: mode::HostStatus,
+    DS: mode::DeviceStatus,
+{
+    /// Consumes the active I2C bus and returns it with monitor mode activated,
+    /// and thus with [the monitor-mode-only methods](#monitor-mode-methods) available.
+    pub fn enable_monitor_mode(
+        &self,
+    ) -> I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>, HS, DS, mode::MonitorActive>
+    {
+        let periph = lpc81x_pac::I2C::ptr();
+        unsafe {
+            (*periph).cfg.modify(|_, w| w.monen().bit(true));
+        }
+        I2C::new()
+    }
+}
+
+/// ## Host mode methods
+///
+/// These methods are available only once host mode is active.
+impl<SCL, SDA, DS, MS>
+    I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>, mode::HostActive, DS, MS>
+where
+    SCL: pins::Pin,
+    SDA: pins::Pin,
+    DS: mode::DeviceStatus,
+    MS: mode::MonitorStatus,
+{
+    /// Consumes the active I2C bus and returns it with host mode deactivated.
+    pub fn disable_host_mode(
+        &self,
+    ) -> I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>, mode::HostInactive, DS, MS> {
+        let periph = lpc81x_pac::I2C::ptr();
+        unsafe {
+            (*periph).cfg.modify(|_, w| w.msten().bit(false));
+        }
+        I2C::new()
+    }
+}
+
+/// ## Device mode methods
+///
+/// These methods are available only once device mode is active.
+impl<SCL, SDA, HS, MS>
+    I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>, HS, mode::DeviceActive, MS>
+where
+    SCL: pins::Pin,
+    SDA: pins::Pin,
+    HS: mode::HostStatus,
+    MS: mode::MonitorStatus,
+{
+    /// Consumes the active I2C bus and returns it with device mode deactivated.
+    pub fn disable_device_mode(
+        &self,
+    ) -> I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>, HS, mode::DeviceInactive, MS>
+    {
+        let periph = lpc81x_pac::I2C::ptr();
+        unsafe {
+            (*periph).cfg.modify(|_, w| w.slven().bit(false));
+        }
+        I2C::new()
+    }
+}
+
+/// ## Monitor mode methods
+///
+/// These methods are available only once monitor mode is active.
+impl<SCL, SDA, HS, DS>
+    I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>, HS, DS, mode::MonitorActive>
+where
+    SCL: pins::Pin,
+    SDA: pins::Pin,
+    HS: mode::HostStatus,
+    DS: mode::DeviceStatus,
+{
+    /// Consumes the active I2C bus and returns it with monitor mode deactivated.
+    pub fn disable_monitor_mode(
+        &self,
+    ) -> I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>, HS, DS, mode::MonitorInactive>
+    {
+        let periph = lpc81x_pac::I2C::ptr();
+        unsafe {
+            (*periph).cfg.modify(|_, w| w.monen().bit(false));
+        }
+        I2C::new()
+    }
+}
+
+impl<SCL, SDA, HS, DS, MS> I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>, HS, DS, MS>
+where
+    SCL: pins::Pin,
+    SDA: pins::Pin,
+    HS: mode::HostStatus,
+    DS: mode::DeviceStatus,
+    MS: mode::MonitorStatus,
+{
     /// Consumes the active I2C bus and returns it deactivated, along with
     /// the now-unused pins that were used for SCL and SDA.
     pub fn deactivate(
         self,
     ) -> (
-        I2C<pins::mode::Unassigned, pins::mode::Unassigned>,
+        I2C<
+            pins::mode::Unassigned,
+            pins::mode::Unassigned,
+            mode::HostInactive,
+            mode::DeviceInactive,
+            mode::MonitorInactive,
+        >,
         SCL,
         SDA,
     ) {
+        let periph = lpc81x_pac::I2C::ptr();
+        unsafe {
+            (*periph).cfg.write(|w| w); // Set back to the reset value
+        }
         Self::set_enabled(false);
         Self::select_scl(pins::PINASSIGN_NOTHING);
         Self::select_sda(pins::PINASSIGN_NOTHING);
