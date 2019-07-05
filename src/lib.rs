@@ -76,6 +76,7 @@ pub extern crate lpc81x_pac as lpc81x;
 pub use lpc81x::Interrupt;
 pub use lpc81x::NVIC_PRIO_BITS;
 
+pub mod i2c;
 pub mod pins;
 pub mod spi;
 
@@ -103,7 +104,7 @@ pub struct Peripherals {
     /// ownership of the members of `pins` have been transferred elsewhere.
     pub pin_inputs: pins::PinInputs,
 
-    /// The first SPI device, initially inactive.
+    /// The first SPI peripheral, initially inactive.
     pub spi0: spi::SPI0<
         spi::mode::Inactive,
         pins::mode::Unassigned,
@@ -112,7 +113,7 @@ pub struct Peripherals {
         pins::mode::Unassigned,
     >,
 
-    /// The second SPI device, initially inactive.
+    /// The second SPI peripheral, initially inactive.
     ///
     /// This device is only present in models LPC812M101JDH16 and
     /// LPC812M101JDH20 (TSSOP packages).
@@ -120,6 +121,12 @@ pub struct Peripherals {
         spi::mode::Inactive,
         pins::mode::Unassigned,
         pins::mode::Unassigned,
+        pins::mode::Unassigned,
+        pins::mode::Unassigned,
+    >,
+
+    // The I2C peripheral, initially inactive.
+    pub i2c: i2c::I2C<
         pins::mode::Unassigned,
         pins::mode::Unassigned,
     >,
@@ -132,6 +139,7 @@ impl Peripherals {
             pin_inputs: pins::PinInputs::new(),
             spi0: spi::SPI0::new(),
             spi1: spi::SPI1::new(),
+            i2c: i2c::I2C::new(),
         }
     }
 
