@@ -267,6 +267,35 @@ where
     }
 }
 
+impl<SCL, SDA, DS, MS> embedded_hal::blocking::i2c::Write
+    for I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>, mode::HostActive, DS, MS>
+where
+    SCL: pins::Pin,
+    SDA: pins::Pin,
+    DS: mode::DeviceStatus,
+    MS: mode::MonitorStatus,
+{
+    type Error = HostError;
+
+    fn write(&mut self, address: u8, bytes: &[u8]) -> Result<(), Self::Error> {
+        let addr_wr = Self::addr_mode(address, true);
+
+        Self::block_for_host_mode_pending()?;
+        Self::set_host_mode_data(addr_wr);
+        Self::host_mode_start();
+
+        for c in bytes {
+            Self::block_for_host_mode_pending()?;
+            Self::set_host_mode_data(*c);
+            Self::host_mode_continue();
+        }
+
+        Self::host_mode_stop();
+
+        Ok(())
+    }
+}
+
 impl<SCL, SDA, DS, MS> embedded_hal::blocking::i2c::WriteRead
     for I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>, mode::HostActive, DS, MS>
 where

@@ -77,6 +77,7 @@ pub use lpc81x::Interrupt;
 pub use lpc81x::NVIC_PRIO_BITS;
 
 pub mod i2c;
+pub mod pinint;
 pub mod pins;
 pub mod spi;
 
@@ -103,6 +104,8 @@ pub struct Peripherals {
     /// parts, and crucially allows access to the input parts even when
     /// ownership of the members of `pins` have been transferred elsewhere.
     pub pin_inputs: pins::PinInputs,
+
+    pub pin_interrupts: pinint::Inactive,
 
     /// The first SPI peripheral, initially inactive.
     pub spi0: spi::SPI0<
@@ -140,6 +143,7 @@ impl Peripherals {
         Self {
             pins: pins::Pins::new(),
             pin_inputs: pins::PinInputs::new(),
+            pin_interrupts: pinint::Inactive::new(),
             spi0: spi::SPI0::new(),
             spi1: spi::SPI1::new(),
             i2c: i2c::I2C::new(),

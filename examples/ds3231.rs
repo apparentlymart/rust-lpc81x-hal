@@ -7,9 +7,13 @@
 extern crate cortex_m_rt;
 extern crate panic_halt;
 
+use cortex_m_rt::entry;
 use lpc81x_hal as hal;
+use lpc81x_pac::interrupt;
 
-#[cortex_m_rt::entry]
+const DS3231_ADDR: u8 = 0b1101000;
+
+#[entry]
 fn main() -> ! {
     // This example demonstrates using the HAL SPI traits to read the date
     // and time from a DS3231 real-time clock IC via its I2C interface.
@@ -17,11 +21,14 @@ fn main() -> ! {
     // This example assumes the following wiring:
     // - SCL on pin 11
     // - SDA on pin 10
+    // - SQW on pin 6
     //
     // We're also expecting to find some leds on pins 7, 17, and 16. On the
     // LPC812-MAX development board these are the red, green, and blue
     // components (respectively) of the on-board RGB LED, wired such that
     // the LEDs are illumnated when the output is driven low.
+
+    cortex_m::interrupt::disable();
 
     let cp = cortex_m::Peripherals::take().unwrap();
     let p = hal::Peripherals::take().unwrap();
@@ -34,24 +41,30 @@ fn main() -> ! {
     let mut led1 = pins.gpio17.to_digital_output(true);
     let mut led2 = pins.gpio16.to_digital_output(true);
 
-    // Arrange for the SysTick interrupt to fire every 12,000,000 cycles.
-    // (At the MCU's default clock rate, that's once per second.)
-    // (If you have the SQW pin from the DS3231 connected to a pin then
-    // it would likely be better to let the RTC chip report its own idea
-    // of elapsing seconds, but to keep the wiring simpler for this example
-    // we'll just use the internal clock.)
-    let mut syst = cp.SYST;
-    syst.set_clock_source(cortex_m::peripheral::syst::SystClkSource::Core);
-    syst.set_reload(12_000_000);
-    syst.clear_current();
-    syst.enable_counter();
-    syst.enable_interrupt();
+    {
+        use embedded_hal::blocking::i2c::Write;
+        // Bit 2 below is the most important thing: we're turning off INTCN so
+        // that the INT/SQW pin will generate a square wave rather than
+        // an alarm interrupt.
+        // We're also setting bits 3 and 4 to zero, which makes the square
+        // wave output be 1Hz, thus generating an edge every half-second.
+        // Everything else here is just set to the default values.
+        i2c.write(DS3231_ADDR, &[0x0eu8, 0b00000000u8]).unwrap();
+    }
+
+    let pinint = p.pin_interrupts.activate();
+    let pinint0 = pinint.int0.edge_triggered(pins.gpio6);
+    pinint0.enable(true, true);
+
+    unsafe {
+        cortex_m::interrupt::enable();
+    }
 
     loop {
         use embedded_hal::blocking::i2c::WriteRead;
         use embedded_hal::digital::v2::OutputPin;
         let mut result: [u8; 7] = [0u8; 7];
-        i2c.write_read(0b1101000u8, &[0u8], &mut result[..])
+        i2c.write_read(DS3231_ADDR, &[0u8], &mut result[..])
             .unwrap();
 
         let seconds = result[0];
@@ -75,8 +88,15 @@ fn main() -> ! {
     }
 }
 
-#[cortex_m_rt::exception]
-fn SysTick() {
-    // We don't actually do anything in here. We're just using SysTick to
-    // make our main loop's wfi return every second.
+#[interrupt]
+fn PININT0() {
+    // We don't actually do anything in here. We're just using this interrupt
+    // to make our main loop's wfi return every half-second.
+    let periph = lpc81x_pac::PIN_INT::ptr();
+    unsafe {
+        // Un-pend the interrupt so that we can make progress in our loop.
+        (*periph).ist.write(|w| {
+            w.pstat().bits(0b00000001) // Clear pinint1
+        });
+    }
 }
