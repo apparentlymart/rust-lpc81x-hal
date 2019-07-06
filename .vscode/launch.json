@@ -12,6 +12,30 @@
       "runToMain": false,
       "postLaunchCommands": ["br rust_begin_unwind"],
       "svdFile": "${workspaceRoot}/lpc800-v0.3.svd"
+    },
+    {
+      "request": "launch",
+      "type": "cortex-debug",
+      "name": "ssd1322 example",
+      "servertype": "openocd",
+      "cwd": "${workspaceRoot}",
+      "executable": "${workspaceRoot}/target/thumbv6m-none-eabi/debug/examples/ssd1322",
+      "configFiles": ["${workspaceRoot}/openocd.cfg"],
+      "runToMain": true,
+      "postLaunchCommands": ["br rust_begin_unwind"],
+      "svdFile": "${workspaceRoot}/lpc800-v0.3.svd"
+    },
+    {
+      "request": "launch",
+      "type": "cortex-debug",
+      "name": "ds3231 example",
+      "servertype": "openocd",
+      "cwd": "${workspaceRoot}",
+      "executable": "${workspaceRoot}/target/thumbv6m-none-eabi/debug/examples/ds3231",
+      "configFiles": ["${workspaceRoot}/openocd.cfg"],
+      "runToMain": true,
+      "postLaunchCommands": ["br rust_begin_unwind"],
+      "svdFile": "${workspaceRoot}/lpc800-v0.3.svd"
     }
   ]
 }

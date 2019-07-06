@@ -19,6 +19,7 @@ pub mod mode;
 ///
 /// With no modes activated, the I2C peripheral is powered but cannot transmit
 /// or recieve any data.
+#[derive(Debug)]
 pub struct I2C<SCL, SDA, HS, DS, MS>
 where
     SCL: pins::PinAssignment,
@@ -66,7 +67,6 @@ where
     #[inline(always)]
     fn set_enabled(enabled: bool) {
         let syscon = lpc81x_pac::SYSCON::ptr();
-        let periph = lpc81x_pac::I2C::ptr();
         unsafe {
             (*syscon)
                 .presetctrl
@@ -88,6 +88,11 @@ where
             });
         }
         cortex_m::asm::dsb();
+    }
+
+    #[inline(always)]
+    fn addr_mode(addr: u8, write: bool) -> u8 {
+        addr << 1 | if write { 0 } else { 1 }
     }
 }
 
@@ -212,6 +217,102 @@ where
         }
         I2C::new()
     }
+
+    #[inline(always)]
+    fn block_for_host_mode_pending() -> Result<(), HostError> {
+        let periph = lpc81x_pac::I2C::ptr();
+
+        loop {
+            let r = unsafe { (*periph).stat.read() };
+            if r.mstarbloss().bit_is_set() {
+                return Err(HostError::ArbitrationLoss);
+            }
+            if r.mstststperr().bit_is_set() {
+                return Err(HostError::StartStop);
+            }
+            if r.mstpending().bit_is_set() {
+                return Ok(());
+            }
+        }
+    }
+
+    #[inline(always)]
+    fn set_host_mode_data(d: u8) {
+        let periph = lpc81x_pac::I2C::ptr();
+        unsafe { (*periph).mstdat.write(|w| w.data().bits(d)) }
+    }
+
+    #[inline(always)]
+    fn get_host_mode_data() -> u8 {
+        let periph = lpc81x_pac::I2C::ptr();
+        unsafe { (*periph).mstdat.read().data().bits() }
+    }
+
+    #[inline(always)]
+    fn host_mode_start() {
+        let periph = lpc81x_pac::I2C::ptr();
+        unsafe { (*periph).mstctl.write(|w| w.mststart().set_bit()) }
+    }
+
+    #[inline(always)]
+    fn host_mode_continue() {
+        let periph = lpc81x_pac::I2C::ptr();
+        unsafe { (*periph).mstctl.write(|w| w.mstcontinue().set_bit()) }
+    }
+
+    #[inline(always)]
+    fn host_mode_stop() {
+        let periph = lpc81x_pac::I2C::ptr();
+        unsafe { (*periph).mstctl.write(|w| w.mststop().set_bit()) }
+    }
+}
+
+impl<SCL, SDA, DS, MS> embedded_hal::blocking::i2c::WriteRead
+    for I2C<pins::mode::Assigned<SCL>, pins::mode::Assigned<SDA>, mode::HostActive, DS, MS>
+where
+    SCL: pins::Pin,
+    SDA: pins::Pin,
+    DS: mode::DeviceStatus,
+    MS: mode::MonitorStatus,
+{
+    type Error = HostError;
+
+    fn write_read(
+        &mut self,
+        address: u8,
+        bytes: &[u8],
+        buffer: &mut [u8],
+    ) -> Result<(), Self::Error> {
+        let addr_wr = Self::addr_mode(address, true);
+        let addr_rd = Self::addr_mode(address, false);
+
+        Self::block_for_host_mode_pending()?;
+        Self::set_host_mode_data(addr_wr);
+        Self::host_mode_start();
+
+        for c in bytes {
+            Self::block_for_host_mode_pending()?;
+            Self::set_host_mode_data(*c);
+            Self::host_mode_continue();
+        }
+
+        Self::block_for_host_mode_pending()?;
+        Self::set_host_mode_data(addr_rd);
+        Self::host_mode_start();
+
+        for (i, c) in buffer.iter_mut().enumerate() {
+            if i > 0 {
+                Self::block_for_host_mode_pending()?;
+                Self::host_mode_continue();
+            }
+            Self::block_for_host_mode_pending()?;
+            *c = Self::get_host_mode_data();
+        }
+
+        Self::host_mode_stop();
+
+        Ok(())
+    }
 }
 
 /// ## Device mode methods
@@ -295,6 +396,13 @@ where
         Self::set_i2c_clock(false);
         (I2C::new(), pin_type_as_is(), pin_type_as_is())
     }
+}
+
+#[derive(Debug)]
+pub enum HostError {
+    Request,
+    ArbitrationLoss,
+    StartStop,
 }
 
 #[inline(always)]
