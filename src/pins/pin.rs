@@ -68,29 +68,29 @@ macro_rules! pin {
         unsafe impl super::InputPin for $name<mode::Unassigned> {}
 
         impl embedded_hal::digital::v2::InputPin for $name<mode::DigitalInput> {
-            type Error = !;
+            type Error = void::Void;
 
-            fn is_high(&self) -> Result<bool, !> {
+            fn is_high(&self) -> Result<bool, void::Void> {
                 let gpio = lpc81x_pac::GPIO_PORT::ptr();
                 Ok(unsafe { (*gpio).b[Self::NUMBER as usize].read().bits() != 0 })
             }
 
-            fn is_low(&self) -> Result<bool, !> {
+            fn is_low(&self) -> Result<bool, void::Void> {
                 let gpio = lpc81x_pac::GPIO_PORT::ptr();
                 Ok(unsafe { (*gpio).b[Self::NUMBER as usize].read().bits() == 0 })
             }
         }
 
         impl embedded_hal::digital::v2::OutputPin for $name<mode::DigitalOutput> {
-            type Error = !;
+            type Error = void::Void;
 
-            fn set_high(&mut self) -> Result<(), !> {
+            fn set_high(&mut self) -> Result<(), void::Void> {
                 let gpio = lpc81x_pac::GPIO_PORT::ptr();
                 unsafe { (*gpio).set0.write(|w| w.bits(Self::REG_MASK)) };
                 Ok(())
             }
 
-            fn set_low(&mut self) -> Result<(), !> {
+            fn set_low(&mut self) -> Result<(), void::Void> {
                 let gpio = lpc81x_pac::GPIO_PORT::ptr();
                 unsafe { (*gpio).clr0.write(|w| w.bits(Self::REG_MASK)) };
                 Ok(())
@@ -98,9 +98,9 @@ macro_rules! pin {
         }
 
         impl embedded_hal::digital::v2::ToggleableOutputPin for $name<mode::DigitalOutput> {
-            type Error = !;
+            type Error = void::Void;
 
-            fn toggle(&mut self) -> Result<(), !> {
+            fn toggle(&mut self) -> Result<(), void::Void> {
                 let gpio = lpc81x_pac::GPIO_PORT::ptr();
                 unsafe { (*gpio).not0.write(|w| w.bits(Self::REG_MASK)) };
                 Ok(())

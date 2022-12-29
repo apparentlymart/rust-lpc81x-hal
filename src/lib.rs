@@ -69,7 +69,6 @@
 //! code. The above example is a cut-down version of the `ssd1322` example.
 
 #![no_std]
-#![feature(never_type)]
 #![feature(optin_builtin_traits)]
 
 pub extern crate lpc81x_pac as lpc81x;

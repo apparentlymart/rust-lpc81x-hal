@@ -239,7 +239,7 @@ macro_rules! spi_device {
             MISO: pins::PinAssignment,
             SSEL: pins::PinAssignment,
         {
-            type Error = !;
+            type Error = void::Void;
 
             /// Sends a word (from 1 to 16 bits) over the SPI interface.
             ///
@@ -249,7 +249,7 @@ macro_rules! spi_device {
             /// When using this trait implementation, implement chip select as
             /// a generic digital output pin instead, because that is what
             /// embedded-hal device drivers expect.
-            fn send(&mut self, word: W) -> Result<(), nb::Error<!>> {
+            fn send(&mut self, word: W) -> Result<(), nb::Error<void::Void>> {
                 let periph = lpc81x_pac::$typename::ptr();
                 let stat = unsafe { (*periph).stat.read() };
                 if stat.txrdy().bit_is_clear() {
@@ -270,7 +270,7 @@ macro_rules! spi_device {
             ///
             /// Calling `read` once for every `send` is mandatory in order to
             /// leave the SPI bus in a correct state for subsequent transfers.
-            fn read(&mut self) -> Result<W, nb::Error<!>> {
+            fn read(&mut self) -> Result<W, nb::Error<void::Void>> {
                 let periph = lpc81x_pac::$typename::ptr();
                 let stat = unsafe { (*periph).stat.read() };
                 if stat.rxrdy().bit_is_clear() {
